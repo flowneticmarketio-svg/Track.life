@@ -12,7 +12,7 @@ DATABASE_URL = os.environ.get('DATABASE_URL') or \
     "postgresql://track_life_user:YSmWqlaIWyR8YDgEm6NfvFzBtYNm2hHZ@dpg-d2qd1efdiees73crvct0-a.oregon-postgres.render.com/track_life"
 
 def get_conn():
-    return psycopg2.connect(DATABASE_URL)
+    return psycopg.connect(DATABASE_URL)
 
 # ---------- DB INITIALIZATION ----------
 def init_db():
