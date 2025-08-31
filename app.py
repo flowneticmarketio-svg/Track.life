@@ -1,20 +1,17 @@
-# app.py
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import psycopg2
 import os
-from datetime import datetime, date, timedelta
-from urllib.parse import urlparse
+from datetime import datetime, date
 
 app = Flask(__name__, static_folder='.')
 CORS(app)
 
 # ---------- DATABASE CONFIG ----------
-# Use the External Database URL you provided
-DATABASE_URL = os.environ.get('DATABASE_URL') or "postgresql://track_life_user:YSmWqlaIWyR8YDgEm6NfvFzBtYNm2hHZ@dpg-d2qd1efdiees73crvct0-a.oregon-postgres.render.com/track_life"
+DATABASE_URL = os.environ.get('DATABASE_URL') or \
+    "postgresql://track_life_user:YSmWqlaIWyR8YDgEm6NfvFzBtYNm2hHZ@dpg-d2qd1efdiees73crvct0-a.oregon-postgres.render.com/track_life"
 
 def get_conn():
-    # psycopg2 connect
     return psycopg2.connect(DATABASE_URL)
 
 # ---------- DB INITIALIZATION ----------
@@ -22,7 +19,6 @@ def init_db():
     conn = get_conn()
     cur = conn.cursor()
 
-    # users table
     cur.execute("""
     CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -31,7 +27,6 @@ def init_db():
     );
     """)
 
-    # progress table - totals per user/subject/type
     cur.execute("""
     CREATE TABLE IF NOT EXISTS progress (
         id SERIAL PRIMARY KEY,
@@ -44,7 +39,6 @@ def init_db():
     );
     """)
 
-    # daily_progress table - records of each day submission
     cur.execute("""
     CREATE TABLE IF NOT EXISTS daily_progress (
         id SERIAL PRIMARY KEY,
@@ -57,7 +51,6 @@ def init_db():
     );
     """)
 
-    # streaks table
     cur.execute("""
     CREATE TABLE IF NOT EXISTS streaks (
         id SERIAL PRIMARY KEY,
@@ -67,71 +60,49 @@ def init_db():
     );
     """)
 
-    # ensure default user (RYUK / THAD1560) exists and default progress rows
+    # ensure default user
     cur.execute("SELECT id FROM users WHERE username = %s", ('RYUK',))
     row = cur.fetchone()
     if not row:
-        cur.execute("INSERT INTO users (username, password) VALUES (%s, %s) RETURNING id", ('RYUK', 'THAD1560'))
+        cur.execute("INSERT INTO users (username, password) VALUES (%s, %s) RETURNING id",
+                    ('RYUK', 'THAD1560'))
         user_id = cur.fetchone()[0]
-
-        # Insert default progress rows for classes and subjects
-        subjects_12 = [
-            ('maths', 'lectures'), ('maths', 'dpp'),
-            ('physics', 'lectures'), ('physics', 'dpp'),
-            ('chemistry', 'lectures'), ('chemistry', 'dpp'),
-            ('class12', 'lectures'), ('class12', 'dpp') -- /* aggregate */
-        ]
-        # For class11
-        subjects_11 = [
-            ('maths11', 'lectures'), ('maths11', 'dpp'),
-            ('physics11', 'lectures'), ('physics11', 'dpp'),
-            ('chemistry11', 'lectures'), ('chemistry11', 'dpp'),
-            ('class11', 'lectures'), ('class11', 'dpp') -- /* aggregate */
-        ]
-        # In Postgres SQL, comments inline with -- would break when combined. We'll insert separately:
-        pass
-
-    conn.commit()
-
-    # Insert default progress records (we separate insertion to avoid SQL comment issues)
-    cur.execute("SELECT id FROM users WHERE username=%s", ('RYUK',))
-    row = cur.fetchone()
-    if row:
+    else:
         user_id = row[0]
-        # Check if progress exists for this user
-        cur.execute("SELECT COUNT(*) FROM progress WHERE user_id=%s", (user_id,))
-        cnt = cur.fetchone()[0]
-        if cnt == 0:
-            subjects = [
-                ('maths', 'lectures', 0, 30), ('maths', 'dpp', 0, 20),
-                ('physics', 'lectures', 0, 30), ('physics', 'dpp', 0, 20),
-                ('chemistry', 'lectures', 0, 30), ('chemistry', 'dpp', 0, 20),
 
-                ('maths11', 'lectures', 0, 30), ('maths11', 'dpp', 0, 20),
-                ('physics11', 'lectures', 0, 30), ('physics11', 'dpp', 0, 20),
-                ('chemistry11', 'lectures', 0, 30), ('chemistry11', 'dpp', 0, 20),
+    # Insert default progress rows if missing
+    cur.execute("SELECT COUNT(*) FROM progress WHERE user_id=%s", (user_id,))
+    cnt = cur.fetchone()[0]
+    if cnt == 0:
+        subjects = [
+            ('maths', 'lectures', 0, 30), ('maths', 'dpp', 0, 20),
+            ('physics', 'lectures', 0, 30), ('physics', 'dpp', 0, 20),
+            ('chemistry', 'lectures', 0, 30), ('chemistry', 'dpp', 0, 20),
 
-                # Aggregate class level rows
-                ('class12', 'lectures', 0, 90), ('class12', 'dpp', 0, 60),
-                ('class11', 'lectures', 0, 90), ('class11', 'dpp', 0, 60),
-            ]
-            for subj, t, comp, tot in subjects:
-                cur.execute("""
-                INSERT INTO progress (user_id, subject, type, completed, total)
-                VALUES (%s, %s, %s, %s, %s)
-                """, (user_id, subj, t, comp, tot))
+            ('maths11', 'lectures', 0, 30), ('maths11', 'dpp', 0, 20),
+            ('physics11', 'lectures', 0, 30), ('physics11', 'dpp', 0, 20),
+            ('chemistry11', 'lectures', 0, 30), ('chemistry11', 'dpp', 0, 20),
 
-    # ensure streak record exists
-    cur.execute("SELECT id FROM streaks WHERE user_id = %s", (row[0],))
+            ('class12', 'lectures', 0, 90), ('class12', 'dpp', 0, 60),
+            ('class11', 'lectures', 0, 90), ('class11', 'dpp', 0, 60),
+        ]
+        for subj, t, comp, tot in subjects:
+            cur.execute("""
+            INSERT INTO progress (user_id, subject, type, completed, total)
+            VALUES (%s, %s, %s, %s, %s)
+            """, (user_id, subj, t, comp, tot))
+
+    # Ensure streak record exists
+    cur.execute("SELECT id FROM streaks WHERE user_id=%s", (user_id,))
     if not cur.fetchone():
         cur.execute("INSERT INTO streaks (user_id, streak_count, last_activity_date) VALUES (%s, %s, %s)",
-                    (row[0], 0, None))
+                    (user_id, 0, None))
 
     conn.commit()
     cur.close()
     conn.close()
 
-# Call init on import
+# run init
 init_db()
 
 # ---------- HELPERS ----------
@@ -142,7 +113,7 @@ def authenticate(username, password):
     r = cur.fetchone()
     cur.close()
     conn.close()
-    return r  # None or (id, username)
+    return r
 
 def update_streak(user_id):
     conn = get_conn()
@@ -158,7 +129,7 @@ def update_streak(user_id):
         else:
             days_diff = (today - last_date).days
             if days_diff == 0:
-                new_streak = streak_count  # already updated today
+                new_streak = streak_count
             elif days_diff == 1:
                 new_streak = streak_count + 1
             else:
@@ -178,7 +149,6 @@ def update_streak(user_id):
 # ---------- ROUTES ----------
 @app.route('/')
 def root():
-    # serve tracker.html if placed in same folder
     return send_from_directory('.', 'tracker.html')
 
 @app.route('/api/login', methods=['POST'])
@@ -217,15 +187,6 @@ def api_get_progress():
 
 @app.route('/api/submit_daily', methods=['POST'])
 def api_submit_daily():
-    """
-    Payload:
-    {
-      "user_id": <int>,
-      "class_level": 12 or 11,
-      "lectures": <int>,
-      "dpp": <int>
-    }
-    """
     data = request.get_json() or {}
     user_id = data.get('user_id')
     class_level = int(data.get('class_level', 12))
@@ -236,44 +197,37 @@ def api_submit_daily():
         return jsonify({'success': False, 'message': 'user_id required'}), 400
 
     today = date.today()
-
     conn = get_conn()
     cur = conn.cursor()
-    # Ensure only one record per user per day per class_level. If exists, update it (sum) or return
     cur.execute("SELECT id, lectures, dpp FROM daily_progress WHERE user_id=%s AND date=%s AND class_level=%s",
                 (user_id, today, class_level))
     row = cur.fetchone()
     if row:
         dp_id, old_lec, old_dpp = row
-        new_lec = max(0, old_lec + lectures)
-        new_dpp = max(0, old_dpp + dpp)
         cur.execute("UPDATE daily_progress SET lectures=%s, dpp=%s, created_at=NOW() WHERE id=%s",
-                    (new_lec, new_dpp, dp_id))
+                    (old_lec + lectures, old_dpp + dpp, dp_id))
     else:
         cur.execute("INSERT INTO daily_progress (user_id, class_level, date, lectures, dpp) VALUES (%s,%s,%s,%s,%s)",
                     (user_id, class_level, today, lectures, dpp))
 
-    # Update aggregate progress rows for class level (class12/class11)
     class_key = f"class{class_level}"
-    # Add to lectures and dpp completed totals, but cap at 'total' column
     # Update lectures
-    cur.execute("SELECT id, completed, total FROM progress WHERE user_id=%s AND subject=%s AND type=%s",
-                (user_id, class_key, 'lectures'))
+    cur.execute("SELECT id, completed, total FROM progress WHERE user_id=%s AND subject=%s AND type='lectures'",
+                (user_id, class_key))
     p = cur.fetchone()
     if p:
-        pid, completed, total = p
-        new_completed = min(total, completed + lectures)
-        cur.execute("UPDATE progress SET completed=%s, last_updated=NOW() WHERE id=%s", (new_completed, pid))
+        pid, comp, total = p
+        cur.execute("UPDATE progress SET completed=%s, last_updated=NOW() WHERE id=%s",
+                    (min(total, comp + lectures), pid))
     # Update dpp
-    cur.execute("SELECT id, completed, total FROM progress WHERE user_id=%s AND subject=%s AND type=%s",
-                (user_id, class_key, 'dpp'))
-    p2 = cur.fetchone()
-    if p2:
-        pid2, completed2, total2 = p2
-        new_completed2 = min(total2, completed2 + dpp)
-        cur.execute("UPDATE progress SET completed=%s, last_updated=NOW() WHERE id=%s", (new_completed2, pid2))
+    cur.execute("SELECT id, completed, total FROM progress WHERE user_id=%s AND subject=%s AND type='dpp'",
+                (user_id, class_key))
+    p = cur.fetchone()
+    if p:
+        pid, comp, total = p
+        cur.execute("UPDATE progress SET completed=%s, last_updated=NOW() WHERE id=%s",
+                    (min(total, comp + dpp), pid))
 
-    # Also update streak (only when user submits daily progress with any positive lectures or dpp)
     streak_value = None
     if lectures > 0 or dpp > 0:
         streak_value = update_streak(user_id)
@@ -281,13 +235,12 @@ def api_submit_daily():
     conn.commit()
     cur.close()
     conn.close()
-
     return jsonify({'success': True, 'message': 'Daily progress recorded', 'streak': streak_value})
 
 @app.route('/api/daily_records', methods=['GET'])
 def api_daily_records():
     user_id = request.args.get('user_id')
-    class_level = request.args.get('class_level')  # optional
+    class_level = request.args.get('class_level')
     if not user_id:
         return jsonify({'success': False, 'message': 'user_id required'}), 400
 
@@ -303,9 +256,7 @@ def api_daily_records():
     cur.close()
     conn.close()
 
-    records = []
-    for d, l, dp, cl in rows:
-        records.append({'date': str(d), 'lectures': l, 'dpp': dp, 'class_level': cl})
+    records = [{'date': str(d), 'lectures': l, 'dpp': dp, 'class_level': cl} for d, l, dp, cl in rows]
     return jsonify({'success': True, 'records': records})
 
 @app.route('/api/streak', methods=['GET'])
@@ -327,14 +278,6 @@ def api_get_streak():
 # ---------- ADMIN ENDPOINTS ----------
 @app.route('/api/admin/update_12th', methods=['POST'])
 def admin_update_12th():
-    """
-    Payload:
-    {
-      "user_id": <int>,
-      "updates": { "maths-lectures": 10, "physics-dpp": 3, ... }
-    }
-    This updates only 12th class related subjects (maths, physics, chemistry and class12 aggregate rows)
-    """
     data = request.get_json() or {}
     user_id = data.get('user_id')
     updates = data.get('updates', {})
@@ -346,9 +289,7 @@ def admin_update_12th():
     for key, value in updates.items():
         if '-' in key:
             subject, typ = key.split('-', 1)
-            # only allow 12th subjects or class12
-            allowed = ['maths', 'physics', 'chemistry', 'class12']
-            if subject not in allowed:
+            if subject not in ['maths', 'physics', 'chemistry', 'class12']:
                 continue
             cur.execute("UPDATE progress SET completed=%s, last_updated=NOW() WHERE user_id=%s AND subject=%s AND type=%s",
                         (int(value), user_id, subject, typ))
@@ -359,9 +300,6 @@ def admin_update_12th():
 
 @app.route('/api/admin/update_11th', methods=['POST'])
 def admin_update_11th():
-    """
-    Similar to update_12th but for 11th class (maths11, physics11, chemistry11, class11)
-    """
     data = request.get_json() or {}
     user_id = data.get('user_id')
     updates = data.get('updates', {})
@@ -373,8 +311,7 @@ def admin_update_11th():
     for key, value in updates.items():
         if '-' in key:
             subject, typ = key.split('-', 1)
-            allowed = ['maths11', 'physics11', 'chemistry11', 'class11']
-            if subject not in allowed:
+            if subject not in ['maths11', 'physics11', 'chemistry11', 'class11']:
                 continue
             cur.execute("UPDATE progress SET completed=%s, last_updated=NOW() WHERE user_id=%s AND subject=%s AND type=%s",
                         (int(value), user_id, subject, typ))
@@ -383,26 +320,7 @@ def admin_update_11th():
     conn.close()
     return jsonify({'success': True, 'message': '11th progress updated'})
 
-# Generic admin update route (keeps backward compatibility)
-@app.route('/api/admin/update', methods=['POST'])
-def admin_update():
-    data = request.get_json() or {}
-    user_id = data.get('user_id')
-    updates = data.get('updates', {})
-    if not user_id:
-        return jsonify({'success': False, 'message': 'user_id required'}), 400
-    conn = get_conn()
-    cur = conn.cursor()
-    for key, value in updates.items():
-        if '-' in key:
-            subject, typ = key.split('-', 1)
-            cur.execute("UPDATE progress SET completed=%s, last_updated=NOW() WHERE user_id=%s AND subject=%s AND type=%s",
-                        (int(value), user_id, subject, typ))
-    conn.commit()
-    cur.close()
-    conn.close()
-    return jsonify({'success': True, 'message': 'Progress updated'})
-
 # ---------- RUN ----------
 if __name__ == '__main__':
+    # For local dev
     app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
