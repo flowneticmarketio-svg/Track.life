@@ -1,326 +1,997 @@
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
-import psycopg
-import os
-from datetime import datetime, date
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Lecture Tracker</title>
 
-app = Flask(__name__, static_folder='.')
-CORS(app)
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <style>
+        :root {
+            --nvidia-green: #76b900;
+            --dark-bg: #111;
+            --card-bg: #1f1f1f;
+            --text: #e9e9e9;
+            --muted: #999;
+            --radius: 10px;
+        }
+        body { 
+            background: var(--dark-bg); 
+            color: var(--text); 
+            font-family: Inter, system-ui, sans-serif; 
+            padding:20px; 
+            margin: 0;
+        }
+        .container { 
+            max-width:1100px; 
+            margin:0 auto; 
+        }
+        header { 
+            display:flex; 
+            justify-content:space-between; 
+            align-items:center; 
+            margin-bottom:20px; 
+            flex-wrap: wrap;
+        }
+        h1 { 
+            color: var(--nvidia-green); 
+            margin: 0;
+        }
+        .card { 
+            background: var(--card-bg); 
+            border-radius:var(--radius); 
+            padding:18px; 
+            margin-bottom:16px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5); 
+        }
+        .grid { 
+            display:grid; 
+            grid-template-columns: 1fr; 
+            gap:20px; 
+        }
+        @media (min-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr 380px;
+            }
+        }
+        .small-grid { 
+            display:grid; 
+            grid-template-columns: repeat(2,1fr); 
+            gap:12px; 
+        }
+        input, button, select { 
+            padding:10px; 
+            border-radius:8px; 
+            border:1px solid #333; 
+            background:#121212; 
+            color:var(--text); 
+            width: 100%;
+            box-sizing: border-box;
+        }
+        button.primary { 
+            background:var(--nvidia-green); 
+            color:#000; 
+            border:none; 
+            font-weight:700; 
+            cursor: pointer;
+        }
+        button.primary:disabled {
+            background: #555;
+            color: #999;
+            cursor: not-allowed;
+        }
+        .center { 
+            text-align:center; 
+        }
+        .progress-circle { 
+            width:140px; 
+            height:140px; 
+            margin:0 auto; 
+            position:relative; 
+        }
+        .circle-text { 
+            position:absolute; 
+            left:50%; 
+            top:50%; 
+            transform:translate(-50%,-50%); 
+            font-size:20px; 
+            font-weight:700; 
+        }
+        ul.records { 
+            list-style:none; 
+            padding:0; 
+            margin:0; 
+            max-height:300px; 
+            overflow:auto; 
+        }
+        ul.records li { 
+            display:flex; 
+            justify-content:space-between; 
+            padding:8px 10px; 
+            border-bottom:1px solid #222; 
+        }
+        label { 
+            display:block; 
+            margin-bottom:6px; 
+            color:var(--muted); 
+        }
+        .inline { 
+            display:flex; 
+            gap:8px; 
+            align-items:center; 
+        }
+        .login-feedback {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            display: none;
+        }
+        .error {
+            background: #ff4444;
+            color: white;
+        }
+        .success {
+            background: #00C851;
+            color: white;
+        }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: var(--nvidia-green);
+            animation: spin 1s ease-in-out infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .flex-group {
+            display: flex;
+            gap: 10px;
+        }
+        .flex-group > * {
+            flex: 1;
+        }
+        .subject-progress {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .subject-item {
+            background: #2a2a2a;
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .subject-name {
+            font-weight: bold;
+        }
+        .subject-count {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .plus-btn {
+            background: var(--nvidia-green);
+            color: black;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-connected {
+            background: #00C851;
+        }
+        .status-disconnected {
+            background: #ff4444;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div>
+            <h1><i class="fas fa-chart-line"></i> Lecture Tracker</h1>
+            <div style="color:var(--muted)">Class 11 & 12</div>
+            <div id="connectionStatus" class="connection-status">
+                <span class="status-dot status-disconnected"></span>
+                <span>Disconnected</span>
+            </div>
+        </div>
+        <div id="loginBlock" class="card">
+            <div style="width:320px;">
+                <div style="margin-bottom:8px"><strong>Login</strong></div>
+                <label>Username</label>
+                <input id="username" placeholder="Username" value="RYUK"/>
+                <label style="margin-top:8px">Password</label>
+                <input id="password" type="password" placeholder="Password" value="THAD1560"/>
+                <div style="display:flex; gap:8px; margin-top:10px;">
+                    <button id="loginBtn" class="primary">
+                        <span id="loginText">Login</span>
+                        <span id="loginSpinner" style="display:none;" class="loading"></span>
+                    </button>
+                </div>
+                <div id="loginFeedback" class="login-feedback"></div>
+            </div>
+        </div>
+    </header>
 
-# ---------- DATABASE CONFIG ----------
-DATABASE_URL = os.environ.get('DATABASE_URL') or \
-    "postgresql://track_life_user:YSmWqlaIWyR8YDgEm6NfvFzBtYNm2hHZ@dpg-d2qd1efdiees73crvct0-a.oregon-postgres.render.com/track_life"
+    <div id="dashboard" style="display:none;">
+        <div class="grid">
+            <div>
+                <div class="card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <strong>Submit Today's Progress</strong>
+                            <div style="color:var(--muted); font-size:13px;">Submit once per day to count streak</div>
+                        </div>
+                        <div id="streakBox" class="center">
+                            <div style="color:var(--muted); font-size:12px;">Streak</div>
+                            <div id="streakCount" style="font-size:22px; color:var(--nvidia-green);">0</div>
+                        </div>
+                    </div>
 
-def get_conn():
-    return psycopg.connect(DATABASE_URL)
+                    <div style="display:flex; gap:18px; margin-top:16px; align-items:center; flex-direction: column;">
+                        <div style="flex:0 0 160px;">
+                            <div class="progress-circle card">
+                                <svg width="140" height="140" viewBox="0 0 120 120">
+                                    <circle cx="60" cy="60" r="54" stroke="#333" stroke-width="8" fill="none"></circle>
+                                    <circle id="todayCircleSVG" cx="60" cy="60" r="54" stroke="#76b900" stroke-width="8" fill="none" stroke-linecap="round" transform="rotate(-90 60 60)"></circle>
+                                </svg>
+                                <div class="circle-text" id="todayCircleText">0</div>
+                            </div>
+                        </div>
 
-# ---------- DB INITIALIZATION ----------
-def init_db():
-    conn = get_conn()
-    cur = conn.cursor()
+                        <div style="width: 100%;">
+                            <label>Class</label>
+                            <select id="todayClass">
+                                <option value="12">12th</option>
+                                <option value="11">11th</option>
+                            </select>
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS users (
-        id SERIAL PRIMARY KEY,
-        username TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL
-    );
-    """)
+                            <div class="flex-group" style="margin-top:10px;">
+                                <div>
+                                    <label>Lectures done today</label>
+                                    <input type="number" id="todayLectures" min="0" value="0"/>
+                                </div>
+                                <div>
+                                    <label>DPP done today</label>
+                                    <input type="number" id="todayDpp" min="0" value="0"/>
+                                </div>
+                            </div>
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS progress (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL,
-        subject TEXT NOT NULL,
-        type TEXT NOT NULL,
-        completed INTEGER DEFAULT 0,
-        total INTEGER DEFAULT 30,
-        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    """)
+                            <div style="margin-top:12px; display:flex; gap:8px;">
+                                <button class="primary" onclick="submitToday()">Submit</button>
+                                <button onclick="fetchDailyRecords()">Refresh Records</button>
+                            </div>
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS daily_progress (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL,
-        class_level INTEGER NOT NULL, -- 11 or 12
-        date DATE NOT NULL,
-        lectures INTEGER DEFAULT 0,
-        dpp INTEGER DEFAULT 0,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    """)
+                            <div style="margin-top:12px; color:var(--muted); font-size:13px;">
+                                Note: Streak increments only if you submit (lectures>0 or dpp>0) for the day.
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS streaks (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL,
-        streak_count INTEGER DEFAULT 0,
-        last_activity_date DATE
-    );
-    """)
+                <div class="card" style="margin-top:12px;">
+                    <strong>Class 12 Progress</strong>
+                    <div class="subject-progress" id="class12Progress">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
 
-    # ensure default user
-    cur.execute("SELECT id FROM users WHERE username = %s", ('RYUK',))
-    row = cur.fetchone()
-    if not row:
-        cur.execute("INSERT INTO users (username, password) VALUES (%s, %s) RETURNING id",
-                    ('RYUK', 'THAD1560'))
-        user_id = cur.fetchone()[0]
-    else:
-        user_id = row[0]
+                <div class="card" style="margin-top:12px;">
+                    <strong>Class 11 Progress</strong>
+                    <div class="subject-progress" id="class11Progress">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
 
-    # Insert default progress rows if missing
-    cur.execute("SELECT COUNT(*) FROM progress WHERE user_id=%s", (user_id,))
-    cnt = cur.fetchone()[0]
-    if cnt == 0:
-        subjects = [
-            ('maths', 'lectures', 0, 30), ('maths', 'dpp', 0, 20),
-            ('physics', 'lectures', 0, 30), ('physics', 'dpp', 0, 20),
-            ('chemistry', 'lectures', 0, 30), ('chemistry', 'dpp', 0, 20),
+                <div class="card" style="margin-top:12px;">
+                    <strong>Daily Records</strong>
+                    <div style="margin-top:8px;">
+                        <label>Show records for</label>
+                        <select id="recordsClass">
+                            <option value="">All classes</option>
+                            <option value="12">12th</option>
+                            <option value="11">11th</option>
+                        </select>
+                        <div style="margin-top:8px;">
+                            <ul id="dailyList" class="records"></ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-            ('maths11', 'lectures', 0, 30), ('maths11', 'dpp', 0, 20),
-            ('physics11', 'lectures', 0, 30), ('physics11', 'dpp', 0, 20),
-            ('chemistry11', 'lectures', 0, 30), ('chemistry11', 'dpp', 0, 20),
+            <div>
+                <div class="card">
+                    <strong>Progress Graph</strong>
+                    <div style="margin-top:12px;">
+                        <canvas id="progressChart" height="260"></canvas>
+                    </div>
+                </div>
 
-            ('class12', 'lectures', 0, 90), ('class12', 'dpp', 0, 60),
-            ('class11', 'lectures', 0, 90), ('class11', 'dpp', 0, 60),
-        ]
-        for subj, t, comp, tot in subjects:
-            cur.execute("""
-            INSERT INTO progress (user_id, subject, type, completed, total)
-            VALUES (%s, %s, %s, %s, %s)
-            """, (user_id, subj, t, comp, tot))
+                <div class="card" style="margin-top:12px;">
+                    <strong>Quick Controls / Admin (UI)</strong>
+                    <div style="margin-top:8px;">
+                        <label>Admin actions (use carefully)</label>
+                        <div style="display:flex; gap:8px; margin-top:8px;">
+                            <input id="admUserId" placeholder="user_id" />
+                            <button onclick="loadMyUserId()">Use my ID</button>
+                        </div>
 
-    # Ensure streak record exists
-    cur.execute("SELECT id FROM streaks WHERE user_id=%s", (user_id,))
-    if not cur.fetchone():
-        cur.execute("INSERT INTO streaks (user_id, streak_count, last_activity_date) VALUES (%s, %s, %s)",
-                    (user_id, 0, None))
+                        <div style="margin-top:8px;">
+                            <small style="color:var(--muted)">Set values for 12th (maths/physics/chemistry/class12)</small>
+                            <div class="small-grid" style="margin-top:8px;">
+                                <input id="admin-maths-lectures" placeholder="maths lectures (12)" type="number"/>
+                                <input id="admin-maths-dpp" placeholder="maths dpp (12)" type="number"/>
+                                <input id="admin-physics-lectures" placeholder="physics lectures (12)" type="number"/>
+                                <input id="admin-physics-dpp" placeholder="physics dpp (12)" type="number"/>
+                                <input id="admin-chem-lectures" placeholder="chem lectures (12)" type="number"/>
+                                <input id="admin-chem-dpp" placeholder="chem dpp (12)" type="number"/>
+                            </div>
+                            <div style="margin-top:8px;">
+                                <button onclick="adminUpdate12()" class="primary">Update 12th</button>
+                            </div>
+                        </div>
 
-    conn.commit()
-    cur.close()
-    conn.close()
+                        <div style="margin-top:12px;">
+                            <small style="color:var(--muted)">Set values for 11th (maths11/physics11/chemistry11/class11)</small>
+                            <div class="small-grid" style="margin-top:8px;">
+                                <input id="admin-m11-lectures" placeholder="maths11 lectures" type="number"/>
+                                <input id="admin-m11-dpp" placeholder="maths11 dpp" type="number"/>
+                                <input id="admin-p11-lectures" placeholder="physics11 lectures" type="number"/>
+                                <input id="admin-p11-dpp" placeholder="physics11 dpp" type="number"/>
+                                <input id="admin-c11-lectures" placeholder="chem11 lectures" type="number"/>
+                                <input id="admin-c11-dpp" placeholder="chem11 dpp" type="number"/>
+                            </div>
+                            <div style="margin-top:8px;">
+                                <button onclick="adminUpdate11()" class="primary">Update 11th</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-# run init
-init_db()
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-# ---------- HELPERS ----------
-def authenticate(username, password):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT id, username FROM users WHERE username=%s AND password=%s", (username, password))
-    r = cur.fetchone()
-    cur.close()
-    conn.close()
-    return r
+<script>
+let loggedUserId = null;
+let chart = null;
+let progressData = {};
+let connectionCheckInterval = null;
 
-def update_streak(user_id):
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT streak_count, last_activity_date FROM streaks WHERE user_id=%s", (user_id,))
-    row = cur.fetchone()
-    today = date.today()
+// Helper to draw the circular progress on the left
+function setTodayCircle(val) {
+    const radius = 54;
+    const circumference = 2 * Math.PI * radius;
+    const percent = Math.min(100, val);
+    const offset = circumference - (percent / 100) * circumference;
+    const circle = document.getElementById('todayCircleSVG');
+    circle.style.strokeDasharray = `${circumference} ${circumference}`;
+    circle.style.strokeDashoffset = offset;
+    document.getElementById('todayCircleText').textContent = val;
+}
 
-    if row:
-        streak_count, last_date = row
-        if last_date is None:
-            new_streak = 1
-        else:
-            days_diff = (today - last_date).days
-            if days_diff == 0:
-                new_streak = streak_count
-            elif days_diff == 1:
-                new_streak = streak_count + 1
-            else:
-                new_streak = 1
-        cur.execute("UPDATE streaks SET streak_count=%s, last_activity_date=%s WHERE user_id=%s",
-                    (new_streak, today, user_id))
-    else:
-        new_streak = 1
-        cur.execute("INSERT INTO streaks (user_id, streak_count, last_activity_date) VALUES (%s, %s, %s)",
-                    (user_id, new_streak, today))
+// Show feedback message
+function showFeedback(message, type) {
+    const feedback = document.getElementById('loginFeedback');
+    feedback.textContent = message;
+    feedback.className = `login-feedback ${type}`;
+    feedback.style.display = 'block';
+    
+    // Hide after 3 seconds
+    setTimeout(() => {
+        feedback.style.display = 'none';
+    }, 3000);
+}
 
-    conn.commit()
-    cur.close()
-    conn.close()
-    return new_streak
+// Update connection status indicator
+function updateConnectionStatus(connected) {
+    const statusEl = document.getElementById('connectionStatus');
+    const dotEl = statusEl.querySelector('.status-dot');
+    const textEl = statusEl.querySelector('span:last-child');
+    
+    if (connected) {
+        dotEl.className = 'status-dot status-connected';
+        textEl.textContent = 'Connected';
+    } else {
+        dotEl.className = 'status-dot status-disconnected';
+        textEl.textContent = 'Disconnected';
+    }
+}
 
-# ---------- ROUTES ----------
-@app.route('/')
-def root():
-    return send_from_directory('.', 'tracker.html')
+// Check server connection
+async function checkServerConnection() {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: 'test', password: 'test'}),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        updateConnectionStatus(true);
+        return true;
+    } catch (error) {
+        updateConnectionStatus(false);
+        return false;
+    }
+}
 
-@app.route('/api/login', methods=['POST'])
-def api_login():
-    data = request.get_json() or {}
-    username = data.get('username')
-    password = data.get('password')
-    if not username or not password:
-        return jsonify({'success': False, 'message': 'Username and password required'}), 400
+// Start connection monitoring
+function startConnectionMonitoring() {
+    // Check immediately
+    checkServerConnection();
+    
+    // Then check every 30 seconds
+    if (connectionCheckInterval) {
+        clearInterval(connectionCheckInterval);
+    }
+    connectionCheckInterval = setInterval(checkServerConnection, 30000);
+}
 
-    user = authenticate(username, password)
-    if user:
-        return jsonify({'success': True, 'user_id': user[0], 'username': user[1]})
-    else:
-        return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
+// Login flow
+document.getElementById('loginBtn').addEventListener('click', async () => {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    
+    if(!username || !password) {
+        showFeedback('Enter credentials', 'error');
+        return;
+    }
 
-@app.route('/api/progress', methods=['GET'])
-def api_get_progress():
-    user_id = request.args.get('user_id')
-    if not user_id:
-        return jsonify({'success': False, 'message': 'user_id required'}), 400
+    // Show loading state
+    document.getElementById('loginText').style.display = 'none';
+    document.getElementById('loginSpinner').style.display = 'inline-block';
+    document.getElementById('loginBtn').disabled = true;
 
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT subject, type, completed, total, last_updated FROM progress WHERE user_id=%s", (user_id,))
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
+    try {
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({username, password})
+        });
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
+        
+        if(js.success) {
+            loggedUserId = js.user_id;
+            document.getElementById('loginBlock').style.display = 'none';
+            document.getElementById('dashboard').style.display = 'block';
+            document.getElementById('admUserId').value = loggedUserId;
+            
+            // Initialize dashboard
+            await fetchProgress();
+            await fetchStreak();
+            await fetchDailyRecords();
+            await loadChart();
+            
+            // Start connection monitoring
+            startConnectionMonitoring();
+            
+            showFeedback('Login successful!', 'success');
+        } else {
+            showFeedback('Login failed: ' + (js.message || 'Invalid credentials'), 'error');
+        }
+    } catch (error) {
+        showFeedback('Network error: Could not connect to server', 'error');
+        console.error('Login error:', error);
+    } finally {
+        // Reset loading state
+        document.getElementById('loginText').style.display = 'inline-block';
+        document.getElementById('loginSpinner').style.display = 'none';
+        document.getElementById('loginBtn').disabled = false;
+    }
+});
 
-    progress = {}
-    for subj, typ, comp, tot, last in rows:
-        key = f"{subj}-{typ}"
-        pct = round((comp / tot) * 100) if tot and tot > 0 else 0
-        progress[key] = {'completed': comp, 'total': tot, 'percentage': pct, 'last_updated': str(last)}
-    return jsonify({'success': True, 'progress': progress})
+// Fetch progress data
+async function fetchProgress() {
+    if(!loggedUserId) return;
+    
+    try {
+        const res = await fetch(`/api/progress?user_id=${loggedUserId}`);
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
+        
+        if(js.success) {
+            progressData = js.progress;
+            renderSubjectProgress();
+        } else {
+            showFeedback('Error fetching progress: ' + (js.message || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        showFeedback('Error fetching progress data', 'error');
+        console.error('Progress fetch error:', error);
+    }
+}
 
-@app.route('/api/submit_daily', methods=['POST'])
-def api_submit_daily():
-    data = request.get_json() or {}
-    user_id = data.get('user_id')
-    class_level = int(data.get('class_level', 12))
-    lectures = int(data.get('lectures', 0))
-    dpp = int(data.get('dpp', 0))
+// Render subject progress for both classes
+function renderSubjectProgress() {
+    const class12El = document.getElementById('class12Progress');
+    const class11El = document.getElementById('class11Progress');
+    
+    // Class 12 subjects
+    const class12Subjects = [
+        { key: 'maths-lectures', name: 'Maths Lectures' },
+        { key: 'maths-dpp', name: 'Maths DPP' },
+        { key: 'physics-lectures', name: 'Physics Lectures' },
+        { key: 'physics-dpp', name: 'Physics DPP' },
+        { key: 'chemistry-lectures', name: 'Chemistry Lectures' },
+        { key: 'chemistry-dpp', name: 'Chemistry DPP' }
+    ];
+    
+    // Class 11 subjects
+    const class11Subjects = [
+        { key: 'maths11-lectures', name: 'Maths Lectures' },
+        { key: 'maths11-dpp', name: 'Maths DPP' },
+        { key: 'physics11-lectures', name: 'Physics Lectures' },
+        { key: 'physics11-dpp', name: 'Physics DPP' },
+        { key: 'chemistry11-lectures', name: 'Chemistry Lectures' },
+        { key: 'chemistry11-dpp', name: 'Chemistry DPP' }
+    ];
+    
+    // Render class 12 progress
+    class12El.innerHTML = '';
+    class12Subjects.forEach(subject => {
+        const data = progressData[subject.key] || { completed: 0, total: 0 };
+        class12El.innerHTML += `
+            <div class="subject-item">
+                <div class="subject-name">${subject.name}</div>
+                <div class="subject-count">
+                    <span>${data.completed}/${data.total}</span>
+                    <button class="plus-btn" onclick="incrementProgress('${subject.key}')">+</button>
+                </div>
+            </div>
+        `;
+    });
+    
+    // Render class 11 progress
+    class11El.innerHTML = '';
+    class11Subjects.forEach(subject => {
+        const data = progressData[subject.key] || { completed: 0, total: 0 };
+        class11El.innerHTML += `
+            <div class="subject-item">
+                <div class="subject-name">${subject.name}</div>
+                <div class="subject-count">
+                    <span>${data.completed}/${data.total}</span>
+                    <button class="plus-btn" onclick="incrementProgress('${subject.key}')">+</button>
+                </div>
+            </div>
+        `;
+    });
+}
 
-    if not user_id:
-        return jsonify({'success': False, 'message': 'user_id required'}), 400
+// Increment progress for a subject
+async function incrementProgress(subjectKey) {
+    if(!loggedUserId) return;
+    
+    try {
+        const [subject, type] = subjectKey.split('-');
+        let classLevel = '12';
+        
+        if (subject.endsWith('11')) {
+            classLevel = '11';
+        }
+        
+        const res = await fetch('/api/submit_daily', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ 
+                user_id: loggedUserId, 
+                class_level: parseInt(classLevel), 
+                lectures: type === 'lectures' ? 1 : 0, 
+                dpp: type === 'dpp' ? 1 : 0
+            })
+        });
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
+        
+        if(js.success) {
+            // Update local progress data
+            if (progressData[subjectKey]) {
+                progressData[subjectKey].completed += 1;
+            }
+            
+            // Update UI
+            renderSubjectProgress();
+            
+            // Update streak if needed
+            if (js.streak !== undefined) {
+                document.getElementById('streakCount').textContent = `${js.streak} days`;
+            }
+            
+            // Refresh chart
+            await loadChart();
+        } else {
+            showFeedback('Error: ' + (js.message || 'Update failed'), 'error');
+        }
+    } catch (error) {
+        showFeedback('Error updating progress', 'error');
+        console.error('Increment error:', error);
+    }
+}
 
-    today = date.today()
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT id, lectures, dpp FROM daily_progress WHERE user_id=%s AND date=%s AND class_level=%s",
-                (user_id, today, class_level))
-    row = cur.fetchone()
-    if row:
-        dp_id, old_lec, old_dpp = row
-        cur.execute("UPDATE daily_progress SET lectures=%s, dpp=%s, created_at=NOW() WHERE id=%s",
-                    (old_lec + lectures, old_dpp + dpp, dp_id))
-    else:
-        cur.execute("INSERT INTO daily_progress (user_id, class_level, date, lectures, dpp) VALUES (%s,%s,%s,%s,%s)",
-                    (user_id, class_level, today, lectures, dpp))
+function loadMyUserId(){
+    if(loggedUserId) document.getElementById('admUserId').value = loggedUserId;
+}
 
-    class_key = f"class{class_level}"
-    # Update lectures
-    cur.execute("SELECT id, completed, total FROM progress WHERE user_id=%s AND subject=%s AND type='lectures'",
-                (user_id, class_key))
-    p = cur.fetchone()
-    if p:
-        pid, comp, total = p
-        cur.execute("UPDATE progress SET completed=%s, last_updated=NOW() WHERE id=%s",
-                    (min(total, comp + lectures), pid))
-    # Update dpp
-    cur.execute("SELECT id, completed, total FROM progress WHERE user_id=%s AND subject=%s AND type='dpp'",
-                (user_id, class_key))
-    p = cur.fetchone()
-    if p:
-        pid, comp, total = p
-        cur.execute("UPDATE progress SET completed=%s, last_updated=NOW() WHERE id=%s",
-                    (min(total, comp + dpp), pid))
+// Submit today's progress
+async function submitToday(){
+    if(!loggedUserId) {
+        showFeedback('Please login first', 'error');
+        return;
+    }
 
-    streak_value = None
-    if lectures > 0 or dpp > 0:
-        streak_value = update_streak(user_id)
+    const cls = document.getElementById('todayClass').value;
+    const lectures = parseInt(document.getElementById('todayLectures').value || 0);
+    const dpp = parseInt(document.getElementById('todayDpp').value || 0);
 
-    conn.commit()
-    cur.close()
-    conn.close()
-    return jsonify({'success': True, 'message': 'Daily progress recorded', 'streak': streak_value})
+    if(lectures <= 0 && dpp <= 0) {
+        if(!confirm('You are submitting 0. Do you want to continue?')) return;
+    }
 
-@app.route('/api/daily_records', methods=['GET'])
-def api_daily_records():
-    user_id = request.args.get('user_id')
-    class_level = request.args.get('class_level')
-    if not user_id:
-        return jsonify({'success': False, 'message': 'user_id required'}), 400
+    try {
+        const res = await fetch('/api/submit_daily', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ 
+                user_id: loggedUserId, 
+                class_level: parseInt(cls), 
+                lectures, 
+                dpp 
+            })
+        });
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
+        
+        if(js.success) {
+            // Update circle value showing combined (lectures+dpp) for a quick visual
+            const total = lectures + dpp;
+            setTodayCircle(total);
+            
+            // Refresh data from server
+            await fetchProgress();
+            await fetchStreak();
+            await fetchDailyRecords();
+            await loadChart();
+            
+            showFeedback('Submitted successfully!', 'success');
+        } else {
+            showFeedback('Error: ' + (js.message || 'Submission failed'), 'error');
+        }
+    } catch (error) {
+        showFeedback('Error: Could not submit data', 'error');
+        console.error('Submission error:', error);
+    }
+}
 
-    conn = get_conn()
-    cur = conn.cursor()
-    if class_level:
-        cur.execute("SELECT date, lectures, dpp, class_level FROM daily_progress WHERE user_id=%s AND class_level=%s ORDER BY date DESC",
-                    (user_id, int(class_level)))
-    else:
-        cur.execute("SELECT date, lectures, dpp, class_level FROM daily_progress WHERE user_id=%s ORDER BY date DESC",
-                    (user_id,))
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
+// Fetch daily records
+async function fetchDailyRecords(){
+    if(!loggedUserId) return;
+    
+    try {
+        const classLevel = document.getElementById('recordsClass').value;
+        let url = `/api/daily_records?user_id=${loggedUserId}`;
+        if (classLevel) {
+            url += `&class_level=${classLevel}`;
+        }
+        
+        const res = await fetch(url);
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
+        
+        if(js.success) {
+            const dailyList = document.getElementById('dailyList');
+            dailyList.innerHTML = '';
+            
+            if (js.records && js.records.length > 0) {
+                js.records.forEach(record => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <div>${record.date} <small style="color:var(--muted)">class ${record.class_level}</small></div>
+                        <div style="min-width:120px; text-align:right;">
+                            <strong>${record.lectures}</strong> lec &nbsp; 
+                            <strong>${record.dpp}</strong> dpp
+                        </div>
+                    `;
+                    dailyList.appendChild(li);
+                });
+            } else {
+                dailyList.innerHTML = '<li style="color:var(--muted); text-align:center;">No records found</li>';
+            }
+        } else {
+            showFeedback('Error fetching records: ' + (js.message || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        showFeedback('Error fetching records', 'error');
+        console.error('Records fetch error:', error);
+    }
+}
 
-    records = [{'date': str(d), 'lectures': l, 'dpp': dp, 'class_level': cl} for d, l, dp, cl in rows]
-    return jsonify({'success': True, 'records': records})
+// Fetch streak
+async function fetchStreak(){
+    if(!loggedUserId) return;
+    
+    try {
+        const res = await fetch(`/api/streak?user_id=${loggedUserId}`);
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
+        
+        if(js.success) {
+            document.getElementById('streakCount').textContent = `${js.streak} days`;
+        } else {
+            console.error('Error fetching streak:', js.message);
+        }
+    } catch (error) {
+        console.error('Streak fetch error:', error);
+    }
+}
 
-@app.route('/api/streak', methods=['GET'])
-def api_get_streak():
-    user_id = request.args.get('user_id')
-    if not user_id:
-        return jsonify({'success': False, 'message': 'user_id required'}), 400
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT streak_count, last_activity_date FROM streaks WHERE user_id=%s", (user_id,))
-    r = cur.fetchone()
-    cur.close()
-    conn.close()
-    if r:
-        return jsonify({'success': True, 'streak': r[0], 'last_activity_date': str(r[1])})
-    else:
-        return jsonify({'success': True, 'streak': 0})
+// Admin update 12th
+async function adminUpdate12(){
+    const uid = document.getElementById('admUserId').value;
+    if(!uid) {
+        alert('Set user id');
+        return;
+    }
 
-# ---------- ADMIN ENDPOINTS ----------
-@app.route('/api/admin/update_12th', methods=['POST'])
-def admin_update_12th():
-    data = request.get_json() or {}
-    user_id = data.get('user_id')
-    updates = data.get('updates', {})
-    if not user_id:
-        return jsonify({'success': False, 'message': 'user_id required'}), 400
+    try {
+        const updates = {
+            'maths-lectures': document.getElementById('admin-maths-lectures').value,
+            'maths-dpp': document.getElementById('admin-maths-dpp').value,
+            'physics-lectures': document.getElementById('admin-physics-lectures').value,
+            'physics-dpp': document.getElementById('admin-physics-dpp').value,
+            'chemistry-lectures': document.getElementById('admin-chem-lectures').value,
+            'chemistry-dpp': document.getElementById('admin-chem-dpp').value
+        };
+        
+        const res = await fetch('/api/admin/update_12th', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ 
+                user_id: uid,
+                updates: updates
+            })
+        });
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
+        
+        if(js.success) {
+            alert('12th progress updated successfully!');
+            if (uid == loggedUserId) {
+                await fetchProgress();
+                await loadChart();
+            }
+        } else {
+            alert('Error: ' + (js.message || 'Update failed'));
+        }
+    } catch (error) {
+        alert('Error updating 12th progress');
+        console.error('Admin update error:', error);
+    }
+}
 
-    conn = get_conn()
-    cur = conn.cursor()
-    for key, value in updates.items():
-        if '-' in key:
-            subject, typ = key.split('-', 1)
-            if subject not in ['maths', 'physics', 'chemistry', 'class12']:
-                continue
-            cur.execute("UPDATE progress SET completed=%s, last_updated=NOW() WHERE user_id=%s AND subject=%s AND type=%s",
-                        (int(value), user_id, subject, typ))
-    conn.commit()
-    cur.close()
-    conn.close()
-    return jsonify({'success': True, 'message': '12th progress updated'})
+// Admin update 11th
+async function adminUpdate11(){
+    const uid = document.getElementById('admUserId').value;
+    if(!uid) {
+        alert('Set user id');
+        return;
+    }
 
-@app.route('/api/admin/update_11th', methods=['POST'])
-def admin_update_11th():
-    data = request.get_json() or {}
-    user_id = data.get('user_id')
-    updates = data.get('updates', {})
-    if not user_id:
-        return jsonify({'success': False, 'message': 'user_id required'}), 400
+    try {
+        const updates = {
+            'maths11-lectures': document.getElementById('admin-m11-lectures').value,
+            'maths11-dpp': document.getElementById('admin-m11-dpp').value,
+            'physics11-lectures': document.getElementById('admin-p11-lectures').value,
+            'physics11-dpp': document.getElementById('admin-p11-dpp').value,
+            'chemistry11-lectures': document.getElementById('admin-c11-lectures').value,
+            'chemistry11-dpp': document.getElementById('admin-c11-dpp').value
+        };
+        
+        const res = await fetch('/api/admin/update_11th', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ 
+                user_id: uid,
+                updates: updates
+            })
+        });
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
+        
+        if(js.success) {
+            alert('11th progress updated successfully!');
+            if (uid == loggedUserId) {
+                await fetchProgress();
+                await loadChart();
+            }
+        } else {
+            alert('Error: ' + (js.message || 'Update failed'));
+        }
+    } catch (error) {
+        alert('Error updating 11th progress');
+        console.error('Admin update error:', error);
+    }
+}
 
-    conn = get_conn()
-    cur = conn.cursor()
-    for key, value in updates.items():
-        if '-' in key:
-            subject, typ = key.split('-', 1)
-            if subject not in ['maths11', 'physics11', 'chemistry11', 'class11']:
-                continue
-            cur.execute("UPDATE progress SET completed=%s, last_updated=NOW() WHERE user_id=%s AND subject=%s AND type=%s",
-                        (int(value), user_id, subject, typ))
-    conn.commit()
-    cur.close()
-    conn.close()
-    return jsonify({'success': True, 'message': '11th progress updated'})
+/* Chart functions */
+async function loadChart(){
+    if(!loggedUserId) return;
+    
+    try {
+        const res = await fetch(`/api/daily_records?user_id=${loggedUserId}`);
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
+        
+        if(js.success && js.records && js.records.length > 0) {
+            // Process records for chart
+            const recordsByDate = {};
+            
+            js.records.forEach(record => {
+                if (!recordsByDate[record.date]) {
+                    recordsByDate[record.date] = { lectures: 0, dpp: 0 };
+                }
+                recordsByDate[record.date].lectures += record.lectures;
+                recordsByDate[record.date].dpp += record.dpp;
+            });
+            
+            // Sort dates and get last 7 days
+            const sortedDates = Object.keys(recordsByDate).sort();
+            const recentDates = sortedDates.slice(-7);
+            
+            const lecturesData = recentDates.map(date => recordsByDate[date].lectures);
+            const dppData = recentDates.map(date => recordsByDate[date].dpp);
+            
+            // Create or update chart
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            
+            if (chart) {
+                chart.data.labels = recentDates;
+                chart.data.datasets[0].data = lecturesData;
+                chart.data.datasets[1].data = dppData;
+                chart.update();
+            } else {
+                chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: { 
+                        labels: recentDates, 
+                        datasets: [
+                            { 
+                                label: 'Lectures', 
+                                data: lecturesData, 
+                                backgroundColor: 'rgba(118,185,0,0.9)' 
+                            },
+                            { 
+                                label: 'DPP', 
+                                data: dppData, 
+                                backgroundColor: 'rgba(255,255,255,0.95)' 
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                stacked: false,
+                                ticks: {
+                                    color: '#e9e9e9'
+                                }
+                            },
+                            y: {
+                                stacked: false,
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#e9e9e9'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { 
+                                labels: { 
+                                    color: '#fff' 
+                                } 
+                            }
+                        }
+                    }
+                });
+            }
+        } else {
+            // No data available
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            if (chart) {
+                chart.destroy();
+                chart = null;
+            }
+            
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.fillStyle = '#1f1f1f';
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.fillStyle = '#e9e9e9';
+            ctx.textAlign = 'center';
+            ctx.font = '16px Arial';
+            ctx.fillText('No data available', ctx.canvas.width / 2, ctx.canvas.height / 2);
+        }
+    } catch (error) {
+        console.error('Chart load error:', error);
+    }
+}
 
-# ---------- RUN ----------
-if __name__ == '__main__':
-    # For local dev
-    app.run(debug=True, host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+/* wire recordsClass change to refresh */
+document.getElementById('recordsClass').addEventListener('change', fetchDailyRecords);
+
+// Initialize the progress circle
+setTodayCircle(0);
+
+// Initial connection check when page loads
+checkServerConnection();
+</script>
+</body>
+</html>
