@@ -382,6 +382,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
+const API_BASE_URL = 'https://track-life.onrender.com';
 let loggedUserId = null;
 let chart = null;
 let progressData = {};
@@ -433,7 +434,7 @@ async function checkServerConnection() {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000);
         
-        const response = await fetch('/api/login', {
+        const response = await fetch(`${API_BASE_URL}/api/login`, {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({username: 'test', password: 'test'}),
@@ -477,7 +478,7 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     document.getElementById('loginBtn').disabled = true;
 
     try {
-        const res = await fetch('/api/login', {
+        const res = await fetch(`${API_BASE_URL}/api/login`, {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({username, password})
@@ -524,7 +525,7 @@ async function fetchProgress() {
     if(!loggedUserId) return;
     
     try {
-        const res = await fetch(`/api/progress?user_id=${loggedUserId}`);
+        const res = await fetch(`${API_BASE_URL}/api/progress?user_id=${loggedUserId}`);
         
         if (!res.ok) {
             throw new Error(`HTTP error! status: ${res.status}`);
@@ -612,7 +613,7 @@ async function incrementProgress(subjectKey) {
             classLevel = '11';
         }
         
-        const res = await fetch('/api/submit_daily', {
+        const res = await fetch(`${API_BASE_URL}/api/submit_daily`, {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({ 
@@ -674,7 +675,7 @@ async function submitToday(){
     }
 
     try {
-        const res = await fetch('/api/submit_daily', {
+        const res = await fetch(`${API_BASE_URL}/api/submit_daily`, {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({ 
@@ -718,7 +719,7 @@ async function fetchDailyRecords(){
     
     try {
         const classLevel = document.getElementById('recordsClass').value;
-        let url = `/api/daily_records?user_id=${loggedUserId}`;
+        let url = `${API_BASE_URL}/api/daily_records?user_id=${loggedUserId}`;
         if (classLevel) {
             url += `&class_level=${classLevel}`;
         }
@@ -764,7 +765,7 @@ async function fetchStreak(){
     if(!loggedUserId) return;
     
     try {
-        const res = await fetch(`/api/streak?user_id=${loggedUserId}`);
+        const res = await fetch(`${API_BASE_URL}/api/streak?user_id=${loggedUserId}`);
         
         if (!res.ok) {
             throw new Error(`HTTP error! status: ${res.status}`);
@@ -800,7 +801,7 @@ async function adminUpdate12(){
             'chemistry-dpp': document.getElementById('admin-chem-dpp').value
         };
         
-        const res = await fetch('/api/admin/update_12th', {
+        const res = await fetch(`${API_BASE_URL}/api/admin/update_12th`, {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({ 
@@ -848,7 +849,7 @@ async function adminUpdate11(){
             'chemistry11-dpp': document.getElementById('admin-c11-dpp').value
         };
         
-        const res = await fetch('/api/admin/update_11th', {
+        const res = await fetch(`${API_BASE_URL}/api/admin/update_11th`, {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({ 
@@ -883,7 +884,7 @@ async function loadChart(){
     if(!loggedUserId) return;
     
     try {
-        const res = await fetch(`/api/daily_records?user_id=${loggedUserId}`);
+        const res = await fetch(`${API_BASE_URL}/api/daily_records?user_id=${loggedUserId}`);
         
         if (!res.ok) {
             throw new Error(`HTTP error! status: ${res.status}`);
