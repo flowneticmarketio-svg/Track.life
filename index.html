@@ -84,8 +84,8 @@
             text-align:center; 
         }
         .progress-circle { 
-            width:100px; 
-            height:100px; 
+            width:140px; 
+            height:140px; 
             margin:0 auto; 
             position:relative; 
         }
@@ -94,7 +94,7 @@
             left:50%; 
             top:50%; 
             transform:translate(-50%,-50%); 
-            font-size:16px; 
+            font-size:20px; 
             font-weight:700; 
         }
         ul.records { 
@@ -154,39 +154,6 @@
         .flex-group > * {
             flex: 1;
         }
-        .tabs {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-        .tab {
-            padding: 8px 16px;
-            background: #333;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        .tab.active {
-            background: var(--nvidia-green);
-            color: #000;
-            font-weight: bold;
-        }
-        .subject-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-        .subject-card {
-            background: #2a2a2a;
-            border-radius: 8px;
-            padding: 12px;
-            text-align: center;
-        }
-        .subject-title {
-            font-size: 14px;
-            margin-bottom: 8px;
-            color: var(--muted);
-        }
     </style>
 </head>
 <body>
@@ -229,43 +196,14 @@
                         </div>
                     </div>
 
-                    <div class="tabs">
-                        <div class="tab active" data-tab="12">Class 12</div>
-                        <div class="tab" data-tab="11">Class 11</div>
-                    </div>
-
-                    <!-- Class 12 Progress -->
-                    <div id="progress-12" class="class-progress">
-                        <div class="subject-grid">
-                            <div class="subject-card">
-                                <div class="subject-title">Maths</div>
-                                <div class="progress-circle">
-                                    <svg width="100" height="100" viewBox="0 0 120 120">
-                                        <circle cx="60" cy="60" r="54" stroke="#333" stroke-width="8" fill="none"></circle>
-                                        <circle id="maths12Circle" cx="60" cy="60" r="54" stroke="#76b900" stroke-width="8" fill="none" stroke-linecap="round" transform="rotate(-90 60 60)"></circle>
-                                    </svg>
-                                    <div class="circle-text" id="maths12Text">0</div>
-                                </div>
-                            </div>
-                            <div class="subject-card">
-                                <div class="subject-title">Physics</div>
-                                <div class="progress-circle">
-                                    <svg width="100" height="100" viewBox="0 0 120 120">
-                                        <circle cx="60" cy="60" r="54" stroke="#333" stroke-width="8" fill="none"></circle>
-                                        <circle id="physics12Circle" cx="60" cy="60" r="54" stroke="#76b900" stroke-width="8" fill="none" stroke-linecap="round" transform="rotate(-90 60 60)"></circle>
-                                    </svg>
-                                    <div class="circle-text" id="physics12Text">0</div>
-                                </div>
-                            </div>
-                            <div class="subject-card">
-                                <div class="subject-title">Chemistry</div>
-                                <div class="progress-circle">
-                                    <svg width="100" height="100" viewBox="0 0 120 120">
-                                        <circle cx="60" cy="60" r="54" stroke="#333" stroke-width="8" fill="none"></circle>
-                                        <circle id="chemistry12Circle" cx="60" cy="60" r="54" stroke="#76b900" stroke-width="8" fill="none" stroke-linecap="round" transform="rotate(-90 60 60)"></circle>
-                                    </svg>
-                                    <div class="circle-text" id="chemistry12Text">0</div>
-                                </div>
+                    <div style="display:flex; gap:18px; margin-top:16px; align-items:center; flex-direction: column;">
+                        <div style="flex:0 0 160px;">
+                            <div class="progress-circle card">
+                                <svg width="140" height="140" viewBox="0 0 120 120">
+                                    <circle cx="60" cy="60" r="54" stroke="#333" stroke-width="8" fill="none"></circle>
+                                    <circle id="todayCircleSVG" cx="60" cy="60" r="54" stroke="#76b900" stroke-width="8" fill="none" stroke-linecap="round" transform="rotate(-90 60 60)"></circle>
+                                </svg>
+                                <div class="circle-text" id="todayCircleText">0</div>
                             </div>
                         </div>
 
@@ -289,70 +227,6 @@
 
                             <div style="margin-top:12px; display:flex; gap:8px;">
                                 <button class="primary" onclick="submitToday()">Submit</button>
-                                <button onclick="fetchDailyRecords()">Refresh Records</button>
-                            </div>
-
-                            <div style="margin-top:12px; color:var(--muted); font-size:13px;">
-                                Note: Streak increments only if you submit (lectures>0 or dpp>0) for the day.
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Class 11 Progress -->
-                    <div id="progress-11" class="class-progress" style="display:none;">
-                        <div class="subject-grid">
-                            <div class="subject-card">
-                                <div class="subject-title">Maths 11</div>
-                                <div class="progress-circle">
-                                    <svg width="100" height="100" viewBox="0 0 120 120">
-                                        <circle cx="60" cy="60" r="54" stroke="#333" stroke-width="8" fill="none"></circle>
-                                        <circle id="maths11Circle" cx="60" cy="60" r="54" stroke="#76b900" stroke-width="8" fill="none" stroke-linecap="round" transform="rotate(-90 60 60)"></circle>
-                                    </svg>
-                                    <div class="circle-text" id="maths11Text">0</div>
-                                </div>
-                            </div>
-                            <div class="subject-card">
-                                <div class="subject-title">Physics 11</div>
-                                <div class="progress-circle">
-                                    <svg width="100" height="100" viewBox="0 0 120 120">
-                                        <circle cx="60" cy="60" r="54" stroke="#333" stroke-width="8" fill="none"></circle>
-                                        <circle id="physics11Circle" cx="60" cy="60" r="54" stroke="#76b900" stroke-width="8" fill="none" stroke-linecap="round" transform="rotate(-90 60 60)"></circle>
-                                    </svg>
-                                    <div class="circle-text" id="physics11Text">0</div>
-                                </div>
-                            </div>
-                            <div class="subject-card">
-                                <div class="subject-title">Chemistry 11</div>
-                                <div class="progress-circle">
-                                    <svg width="100" height="100" viewBox="0 0 120 120">
-                                        <circle cx="60" cy="60" r="54" stroke="#333" stroke-width="8" fill="none"></circle>
-                                        <circle id="chemistry11Circle" cx="60" cy="60" r="54" stroke="#76b900" stroke-width="8" fill="none" stroke-linecap="round" transform="rotate(-90 60 60)"></circle>
-                                    </svg>
-                                    <div class="circle-text" id="chemistry11Text">0</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="width: 100%;">
-                            <label>Class</label>
-                            <select id="todayClass11">
-                                <option value="11">11th</option>
-                                <option value="12">12th</option>
-                            </select>
-
-                            <div class="flex-group" style="margin-top:10px;">
-                                <div>
-                                    <label>Lectures done today</label>
-                                    <input type="number" id="todayLectures11" min="0" value="0"/>
-                                </div>
-                                <div>
-                                    <label>DPP done today</label>
-                                    <input type="number" id="todayDpp11" min="0" value="0"/>
-                                </div>
-                            </div>
-
-                            <div style="margin-top:12px; display:flex; gap:8px;">
-                                <button class="primary" onclick="submitToday11()">Submit</button>
                                 <button onclick="fetchDailyRecords()">Refresh Records</button>
                             </div>
 
@@ -439,27 +313,16 @@
 let loggedUserId = null;
 let chart = null;
 
-// Helper to draw the circular progress for each subject
-function setSubjectCircle(circleId, textId, val) {
+// Helper to draw the circular progress on the left
+function setTodayCircle(val) {
     const radius = 54;
     const circumference = 2 * Math.PI * radius;
     const percent = Math.min(100, val);
     const offset = circumference - (percent / 100) * circumference;
-    const circle = document.getElementById(circleId);
+    const circle = document.getElementById('todayCircleSVG');
     circle.style.strokeDasharray = `${circumference} ${circumference}`;
     circle.style.strokeDashoffset = offset;
-    document.getElementById(textId).textContent = val;
-}
-
-// Initialize all progress circles
-function initAllCircles() {
-    // Initialize all circles to 0
-    setSubjectCircle('maths12Circle', 'maths12Text', 0);
-    setSubjectCircle('physics12Circle', 'physics12Text', 0);
-    setSubjectCircle('chemistry12Circle', 'chemistry12Text', 0);
-    setSubjectCircle('maths11Circle', 'maths11Text', 0);
-    setSubjectCircle('physics11Circle', 'physics11Text', 0);
-    setSubjectCircle('chemistry11Circle', 'chemistry11Text', 0);
+    document.getElementById('todayCircleText').textContent = val;
 }
 
 // Show feedback message
@@ -474,26 +337,6 @@ function showFeedback(message, type) {
         feedback.style.display = 'none';
     }, 3000);
 }
-
-// Tab switching functionality
-document.querySelectorAll('.tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-        // Remove active class from all tabs
-        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-        
-        // Add active class to clicked tab
-        tab.classList.add('active');
-        
-        // Hide all progress sections
-        document.querySelectorAll('.class-progress').forEach(section => {
-            section.style.display = 'none';
-        });
-        
-        // Show the selected progress section
-        const tabId = tab.getAttribute('data-tab');
-        document.getElementById(`progress-${tabId}`).style.display = 'block';
-    });
-});
 
 // Login flow
 document.getElementById('loginBtn').addEventListener('click', async () => {
@@ -514,7 +357,18 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
         // Simulate API call with timeout to demonstrate the UI
         await new Promise(resolve => setTimeout(resolve, 1500));
         
+        // In a real scenario, you would make the actual API call:
+        /*
+        const res = await fetch('/api/login', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({username, password})
+        });
+        const js = await res.json();
+        */
+        
         // For demonstration, we'll simulate a successful login
+        // Replace this with the actual API response handling
         const js = {success: true, user_id: 1, username: username};
         
         if(js.success) {
@@ -523,17 +377,8 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('admUserId').value = loggedUserId;
             
-            // Initialize all progress circles
-            initAllCircles();
-            
-            // Set sample progress values
-            setSubjectCircle('maths12Circle', 'maths12Text', 75);
-            setSubjectCircle('physics12Circle', 'physics12Text', 45);
-            setSubjectCircle('chemistry12Circle', 'chemistry12Text', 60);
-            setSubjectCircle('maths11Circle', 'maths11Text', 30);
-            setSubjectCircle('physics11Circle', 'physics11Text', 20);
-            setSubjectCircle('chemistry11Circle', 'chemistry11Text', 40);
-            
+            // Simulate fetching data
+            setTodayCircle(5);
             document.getElementById('streakCount').textContent = '3 days';
             
             // Add some sample records
@@ -564,7 +409,7 @@ function loadMyUserId(){
     if(loggedUserId) document.getElementById('admUserId').value = loggedUserId;
 }
 
-// Submit today's progress for class 12
+// Submit today's progress
 async function submitToday(){
     if(!loggedUserId) {
         showFeedback('Please login first', 'error');
@@ -583,56 +428,22 @@ async function submitToday(){
     
     // Simulate API call
     try {
+        // In a real app, you would make the actual API call:
+        /*
+        const res = await fetch('/api/submit_daily', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ user_id: loggedUserId, class_level: parseInt(cls), lectures, dpp })
+        });
+        const js = await res.json();
+        */
+        
         // For demonstration, we'll simulate a successful submission
         await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Update progress circles with random values for demo
-        setSubjectCircle('maths12Circle', 'maths12Text', Math.min(100, Math.floor(Math.random() * 20) + parseInt(document.getElementById('maths12Text').textContent)));
-        setSubjectCircle('physics12Circle', 'physics12Text', Math.min(100, Math.floor(Math.random() * 20) + parseInt(document.getElementById('physics12Text').textContent)));
-        setSubjectCircle('chemistry12Circle', 'chemistry12Text', Math.min(100, Math.floor(Math.random() * 20) + parseInt(document.getElementById('chemistry12Text').textContent)));
-        
-        // Add the new record to the list
-        const today = new Date().toISOString().split('T')[0];
-        const dailyList = document.getElementById('dailyList');
-        const newItem = document.createElement('li');
-        newItem.innerHTML = `<div>${today} <small style="color:var(--muted)">class ${cls}</small></div>
-                            <div style="min-width:120px; text-align:right;"><strong>${lectures}</strong> lec &nbsp; <strong>${dpp}</strong> dpp</div>`;
-        dailyList.insertBefore(newItem, dailyList.firstChild);
-        
-        alert('Submitted successfully!');
-        updateChart();
-    } catch (error) {
-        alert('Error: Could not submit data');
-        console.error('Submission error:', error);
-    }
-}
-
-// Submit today's progress for class 11
-async function submitToday11(){
-    if(!loggedUserId) {
-        showFeedback('Please login first', 'error');
-        return;
-    }
-
-    const cls = document.getElementById('todayClass11').value;
-    const lectures = parseInt(document.getElementById('todayLectures11').value || 0);
-    const dpp = parseInt(document.getElementById('todayDpp11').value || 0);
-
-    if(lectures <= 0 && dpp <= 0) {
-        if(!confirm('You are submitting 0. Do you want to continue?')) return;
-    }
-
-    // Show loading or processing state here in a real app
-    
-    // Simulate API call
-    try {
-        // For demonstration, we'll simulate a successful submission
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Update progress circles with random values for demo
-        setSubjectCircle('maths11Circle', 'maths11Text', Math.min(100, Math.floor(Math.random() * 20) + parseInt(document.getElementById('maths11Text').textContent)));
-        setSubjectCircle('physics11Circle', 'physics11Text', Math.min(100, Math.floor(Math.random() * 20) + parseInt(document.getElementById('physics11Text').textContent)));
-        setSubjectCircle('chemistry11Circle', 'chemistry11Text', Math.min(100, Math.floor(Math.random() * 20) + parseInt(document.getElementById('chemistry11Text').textContent)));
+        // update circle value showing combined (lectures+dpp) for a quick visual
+        const total = lectures + dpp;
+        setTodayCircle(total);
         
         // Add the new record to the list
         const today = new Date().toISOString().split('T')[0];
@@ -747,8 +558,8 @@ async function updateChart(){
 /* wire recordsClass change to refresh */
 document.getElementById('recordsClass').addEventListener('change', fetchDailyRecords);
 
-// Initialize the progress circles
-initAllCircles();
+// Initialize the progress circle
+setTodayCircle(0);
 </script>
 </body>
 </html>
