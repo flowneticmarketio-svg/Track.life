@@ -154,6 +154,60 @@
         .flex-group > * {
             flex: 1;
         }
+        .subject-progress {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+        }
+        .subject-item {
+            background: #2a2a2a;
+            padding: 12px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .subject-name {
+            font-weight: bold;
+        }
+        .subject-count {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .plus-btn {
+            background: var(--nvidia-green);
+            color: black;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 8px;
+            font-size: 14px;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .status-connected {
+            background: #00C851;
+        }
+        .status-disconnected {
+            background: #ff4444;
+        }
     </style>
 </head>
 <body>
@@ -162,6 +216,10 @@
         <div>
             <h1><i class="fas fa-chart-line"></i> Lecture Tracker</h1>
             <div style="color:var(--muted)">Class 11 & 12</div>
+            <div id="connectionStatus" class="connection-status">
+                <span class="status-dot status-disconnected"></span>
+                <span>Disconnected</span>
+            </div>
         </div>
         <div id="loginBlock" class="card">
             <div style="width:320px;">
@@ -234,6 +292,20 @@
                                 Note: Streak increments only if you submit (lectures>0 or dpp>0) for the day.
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top:12px;">
+                    <strong>Class 12 Progress</strong>
+                    <div class="subject-progress" id="class12Progress">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="card" style="margin-top:12px;">
+                    <strong>Class 11 Progress</strong>
+                    <div class="subject-progress" id="class11Progress">
+                        <!-- Will be populated by JavaScript -->
                     </div>
                 </div>
 
@@ -312,6 +384,8 @@
 <script>
 let loggedUserId = null;
 let chart = null;
+let progressData = {};
+let connectionCheckInterval = null;
 
 // Helper to draw the circular progress on the left
 function setTodayCircle(val) {
@@ -338,6 +412,55 @@ function showFeedback(message, type) {
     }, 3000);
 }
 
+// Update connection status indicator
+function updateConnectionStatus(connected) {
+    const statusEl = document.getElementById('connectionStatus');
+    const dotEl = statusEl.querySelector('.status-dot');
+    const textEl = statusEl.querySelector('span:last-child');
+    
+    if (connected) {
+        dotEl.className = 'status-dot status-connected';
+        textEl.textContent = 'Connected';
+    } else {
+        dotEl.className = 'status-dot status-disconnected';
+        textEl.textContent = 'Disconnected';
+    }
+}
+
+// Check server connection
+async function checkServerConnection() {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        const response = await fetch('/api/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username: 'test', password: 'test'}),
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        updateConnectionStatus(true);
+        return true;
+    } catch (error) {
+        updateConnectionStatus(false);
+        return false;
+    }
+}
+
+// Start connection monitoring
+function startConnectionMonitoring() {
+    // Check immediately
+    checkServerConnection();
+    
+    // Then check every 30 seconds
+    if (connectionCheckInterval) {
+        clearInterval(connectionCheckInterval);
+    }
+    connectionCheckInterval = setInterval(checkServerConnection, 30000);
+}
+
 // Login flow
 document.getElementById('loginBtn').addEventListener('click', async () => {
     const username = document.getElementById('username').value.trim();
@@ -354,22 +477,17 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
     document.getElementById('loginBtn').disabled = true;
 
     try {
-        // Simulate API call with timeout to demonstrate the UI
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // In a real scenario, you would make the actual API call:
-        /*
         const res = await fetch('/api/login', {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
             body: JSON.stringify({username, password})
         });
-        const js = await res.json();
-        */
         
-        // For demonstration, we'll simulate a successful login
-        // Replace this with the actual API response handling
-        const js = {success: true, user_id: 1, username: username};
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
         
         if(js.success) {
             loggedUserId = js.user_id;
@@ -377,22 +495,18 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
             document.getElementById('dashboard').style.display = 'block';
             document.getElementById('admUserId').value = loggedUserId;
             
-            // Simulate fetching data
-            setTodayCircle(5);
-            document.getElementById('streakCount').textContent = '3 days';
+            // Initialize dashboard
+            await fetchProgress();
+            await fetchStreak();
+            await fetchDailyRecords();
+            await loadChart();
             
-            // Add some sample records
-            const dailyList = document.getElementById('dailyList');
-            dailyList.innerHTML = `
-                <li><div>2023-10-15 <small style="color:var(--muted)">class 12</small></div><div style="min-width:120px; text-align:right;"><strong>2</strong> lec &nbsp; <strong>1</strong> dpp</div></li>
-                <li><div>2023-10-14 <small style="color:var(--muted)">class 12</small></div><div style="min-width:120px; text-align:right;"><strong>1</strong> lec &nbsp; <strong>2</strong> dpp</div></li>
-                <li><div>2023-10-13 <small style="color:var(--muted)">class 11</small></div><div style="min-width:120px; text-align:right;"><strong>3</strong> lec &nbsp; <strong>0</strong> dpp</div></li>
-            `;
+            // Start connection monitoring
+            startConnectionMonitoring();
             
-            loadChart();
             showFeedback('Login successful!', 'success');
         } else {
-            showFeedback('Login failed: Invalid credentials', 'error');
+            showFeedback('Login failed: ' + (js.message || 'Invalid credentials'), 'error');
         }
     } catch (error) {
         showFeedback('Network error: Could not connect to server', 'error');
@@ -404,6 +518,141 @@ document.getElementById('loginBtn').addEventListener('click', async () => {
         document.getElementById('loginBtn').disabled = false;
     }
 });
+
+// Fetch progress data
+async function fetchProgress() {
+    if(!loggedUserId) return;
+    
+    try {
+        const res = await fetch(`/api/progress?user_id=${loggedUserId}`);
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
+        
+        if(js.success) {
+            progressData = js.progress;
+            renderSubjectProgress();
+        } else {
+            showFeedback('Error fetching progress: ' + (js.message || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        showFeedback('Error fetching progress data', 'error');
+        console.error('Progress fetch error:', error);
+    }
+}
+
+// Render subject progress for both classes
+function renderSubjectProgress() {
+    const class12El = document.getElementById('class12Progress');
+    const class11El = document.getElementById('class11Progress');
+    
+    // Class 12 subjects
+    const class12Subjects = [
+        { key: 'maths-lectures', name: 'Maths Lectures' },
+        { key: 'maths-dpp', name: 'Maths DPP' },
+        { key: 'physics-lectures', name: 'Physics Lectures' },
+        { key: 'physics-dpp', name: 'Physics DPP' },
+        { key: 'chemistry-lectures', name: 'Chemistry Lectures' },
+        { key: 'chemistry-dpp', name: 'Chemistry DPP' }
+    ];
+    
+    // Class 11 subjects
+    const class11Subjects = [
+        { key: 'maths11-lectures', name: 'Maths Lectures' },
+        { key: 'maths11-dpp', name: 'Maths DPP' },
+        { key: 'physics11-lectures', name: 'Physics Lectures' },
+        { key: 'physics11-dpp', name: 'Physics DPP' },
+        { key: 'chemistry11-lectures', name: 'Chemistry Lectures' },
+        { key: 'chemistry11-dpp', name: 'Chemistry DPP' }
+    ];
+    
+    // Render class 12 progress
+    class12El.innerHTML = '';
+    class12Subjects.forEach(subject => {
+        const data = progressData[subject.key] || { completed: 0, total: 0 };
+        class12El.innerHTML += `
+            <div class="subject-item">
+                <div class="subject-name">${subject.name}</div>
+                <div class="subject-count">
+                    <span>${data.completed}/${data.total}</span>
+                    <button class="plus-btn" onclick="incrementProgress('${subject.key}')">+</button>
+                </div>
+            </div>
+        `;
+    });
+    
+    // Render class 11 progress
+    class11El.innerHTML = '';
+    class11Subjects.forEach(subject => {
+        const data = progressData[subject.key] || { completed: 0, total: 0 };
+        class11El.innerHTML += `
+            <div class="subject-item">
+                <div class="subject-name">${subject.name}</div>
+                <div class="subject-count">
+                    <span>${data.completed}/${data.total}</span>
+                    <button class="plus-btn" onclick="incrementProgress('${subject.key}')">+</button>
+                </div>
+            </div>
+        `;
+    });
+}
+
+// Increment progress for a subject
+async function incrementProgress(subjectKey) {
+    if(!loggedUserId) return;
+    
+    try {
+        const [subject, type] = subjectKey.split('-');
+        let classLevel = '12';
+        
+        if (subject.endsWith('11')) {
+            classLevel = '11';
+        }
+        
+        const res = await fetch('/api/submit_daily', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ 
+                user_id: loggedUserId, 
+                class_level: parseInt(classLevel), 
+                lectures: type === 'lectures' ? 1 : 0, 
+                dpp: type === 'dpp' ? 1 : 0
+            })
+        });
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
+        
+        if(js.success) {
+            // Update local progress data
+            if (progressData[subjectKey]) {
+                progressData[subjectKey].completed += 1;
+            }
+            
+            // Update UI
+            renderSubjectProgress();
+            
+            // Update streak if needed
+            if (js.streak !== undefined) {
+                document.getElementById('streakCount').textContent = `${js.streak} days`;
+            }
+            
+            // Refresh chart
+            await loadChart();
+        } else {
+            showFeedback('Error: ' + (js.message || 'Update failed'), 'error');
+        }
+    } catch (error) {
+        showFeedback('Error updating progress', 'error');
+        console.error('Increment error:', error);
+    }
+}
 
 function loadMyUserId(){
     if(loggedUserId) document.getElementById('admUserId').value = loggedUserId;
@@ -424,39 +673,41 @@ async function submitToday(){
         if(!confirm('You are submitting 0. Do you want to continue?')) return;
     }
 
-    // Show loading or processing state here in a real app
-    
-    // Simulate API call
     try {
-        // In a real app, you would make the actual API call:
-        /*
         const res = await fetch('/api/submit_daily', {
             method: 'POST',
             headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ user_id: loggedUserId, class_level: parseInt(cls), lectures, dpp })
+            body: JSON.stringify({ 
+                user_id: loggedUserId, 
+                class_level: parseInt(cls), 
+                lectures, 
+                dpp 
+            })
         });
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
         const js = await res.json();
-        */
         
-        // For demonstration, we'll simulate a successful submission
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // update circle value showing combined (lectures+dpp) for a quick visual
-        const total = lectures + dpp;
-        setTodayCircle(total);
-        
-        // Add the new record to the list
-        const today = new Date().toISOString().split('T')[0];
-        const dailyList = document.getElementById('dailyList');
-        const newItem = document.createElement('li');
-        newItem.innerHTML = `<div>${today} <small style="color:var(--muted)">class ${cls}</small></div>
-                            <div style="min-width:120px; text-align:right;"><strong>${lectures}</strong> lec &nbsp; <strong>${dpp}</strong> dpp</div>`;
-        dailyList.insertBefore(newItem, dailyList.firstChild);
-        
-        alert('Submitted successfully!');
-        updateChart();
+        if(js.success) {
+            // Update circle value showing combined (lectures+dpp) for a quick visual
+            const total = lectures + dpp;
+            setTodayCircle(total);
+            
+            // Refresh data from server
+            await fetchProgress();
+            await fetchStreak();
+            await fetchDailyRecords();
+            await loadChart();
+            
+            showFeedback('Submitted successfully!', 'success');
+        } else {
+            showFeedback('Error: ' + (js.message || 'Submission failed'), 'error');
+        }
     } catch (error) {
-        alert('Error: Could not submit data');
+        showFeedback('Error: Could not submit data', 'error');
         console.error('Submission error:', error);
     }
 }
@@ -464,14 +715,71 @@ async function submitToday(){
 // Fetch daily records
 async function fetchDailyRecords(){
     if(!loggedUserId) return;
-    // This would call your API in a real application
-    alert("This would refresh records from the server in the live version");
+    
+    try {
+        const classLevel = document.getElementById('recordsClass').value;
+        let url = `/api/daily_records?user_id=${loggedUserId}`;
+        if (classLevel) {
+            url += `&class_level=${classLevel}`;
+        }
+        
+        const res = await fetch(url);
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
+        
+        if(js.success) {
+            const dailyList = document.getElementById('dailyList');
+            dailyList.innerHTML = '';
+            
+            if (js.records && js.records.length > 0) {
+                js.records.forEach(record => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `
+                        <div>${record.date} <small style="color:var(--muted)">class ${record.class_level}</small></div>
+                        <div style="min-width:120px; text-align:right;">
+                            <strong>${record.lectures}</strong> lec &nbsp; 
+                            <strong>${record.dpp}</strong> dpp
+                        </div>
+                    `;
+                    dailyList.appendChild(li);
+                });
+            } else {
+                dailyList.innerHTML = '<li style="color:var(--muted); text-align:center;">No records found</li>';
+            }
+        } else {
+            showFeedback('Error fetching records: ' + (js.message || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        showFeedback('Error fetching records', 'error');
+        console.error('Records fetch error:', error);
+    }
 }
 
 // Fetch streak
 async function fetchStreak(){
     if(!loggedUserId) return;
-    // This would call your API in a real application
+    
+    try {
+        const res = await fetch(`/api/streak?user_id=${loggedUserId}`);
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
+        
+        if(js.success) {
+            document.getElementById('streakCount').textContent = `${js.streak} days`;
+        } else {
+            console.error('Error fetching streak:', js.message);
+        }
+    } catch (error) {
+        console.error('Streak fetch error:', error);
+    }
 }
 
 // Admin update 12th
@@ -482,7 +790,44 @@ async function adminUpdate12(){
         return;
     }
 
-    alert("This would update 12th progress in the live version");
+    try {
+        const updates = {
+            'maths-lectures': document.getElementById('admin-maths-lectures').value,
+            'maths-dpp': document.getElementById('admin-maths-dpp').value,
+            'physics-lectures': document.getElementById('admin-physics-lectures').value,
+            'physics-dpp': document.getElementById('admin-physics-dpp').value,
+            'chemistry-lectures': document.getElementById('admin-chem-lectures').value,
+            'chemistry-dpp': document.getElementById('admin-chem-dpp').value
+        };
+        
+        const res = await fetch('/api/admin/update_12th', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ 
+                user_id: uid,
+                updates: updates
+            })
+        });
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
+        
+        if(js.success) {
+            alert('12th progress updated successfully!');
+            if (uid == loggedUserId) {
+                await fetchProgress();
+                await loadChart();
+            }
+        } else {
+            alert('Error: ' + (js.message || 'Update failed'));
+        }
+    } catch (error) {
+        alert('Error updating 12th progress');
+        console.error('Admin update error:', error);
+    }
 }
 
 // Admin update 11th
@@ -493,66 +838,150 @@ async function adminUpdate11(){
         return;
     }
 
-    alert("This would update 11th progress in the live version");
+    try {
+        const updates = {
+            'maths11-lectures': document.getElementById('admin-m11-lectures').value,
+            'maths11-dpp': document.getElementById('admin-m11-dpp').value,
+            'physics11-lectures': document.getElementById('admin-p11-lectures').value,
+            'physics11-dpp': document.getElementById('admin-p11-dpp').value,
+            'chemistry11-lectures': document.getElementById('admin-c11-lectures').value,
+            'chemistry11-dpp': document.getElementById('admin-c11-dpp').value
+        };
+        
+        const res = await fetch('/api/admin/update_11th', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ 
+                user_id: uid,
+                updates: updates
+            })
+        });
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        
+        const js = await res.json();
+        
+        if(js.success) {
+            alert('11th progress updated successfully!');
+            if (uid == loggedUserId) {
+                await fetchProgress();
+                await loadChart();
+            }
+        } else {
+            alert('Error: ' + (js.message || 'Update failed'));
+        }
+    } catch (error) {
+        alert('Error updating 11th progress');
+        console.error('Admin update error:', error);
+    }
 }
 
 /* Chart functions */
 async function loadChart(){
-    const ctx = document.getElementById('progressChart').getContext('2d');
+    if(!loggedUserId) return;
     
-    // Sample data for demonstration
-    const labels = ['Oct 10', 'Oct 11', 'Oct 12', 'Oct 13', 'Oct 14', 'Oct 15'];
-    const lectures = [2, 1, 0, 3, 1, 2];
-    const dpps = [1, 2, 0, 0, 2, 1];
-    
-    chart = new Chart(ctx, {
-        type: 'bar',
-        data: { 
-            labels: labels, 
-            datasets: [
-                { 
-                    label: 'Lectures', 
-                    data: lectures, 
-                    backgroundColor: 'rgba(118,185,0,0.9)' 
-                },
-                { 
-                    label: 'DPP', 
-                    data: dpps, 
-                    backgroundColor: 'rgba(255,255,255,0.95)' 
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                x: {
-                    stacked: false,
-                    ticks: {
-                        color: '#e9e9e9'
-                    }
-                },
-                y: {
-                    stacked: false,
-                    beginAtZero: true,
-                    ticks: {
-                        color: '#e9e9e9'
-                    }
-                }
-            },
-            plugins: {
-                legend: { 
-                    labels: { 
-                        color: '#fff' 
-                    } 
-                }
-            }
+    try {
+        const res = await fetch(`/api/daily_records?user_id=${loggedUserId}`);
+        
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
         }
-    });
-}
-
-async function updateChart(){
-    // This would update the chart with real data in a live application
-    console.log("Chart would be updated with new data");
+        
+        const js = await res.json();
+        
+        if(js.success && js.records && js.records.length > 0) {
+            // Process records for chart
+            const recordsByDate = {};
+            
+            js.records.forEach(record => {
+                if (!recordsByDate[record.date]) {
+                    recordsByDate[record.date] = { lectures: 0, dpp: 0 };
+                }
+                recordsByDate[record.date].lectures += record.lectures;
+                recordsByDate[record.date].dpp += record.dpp;
+            });
+            
+            // Sort dates and get last 7 days
+            const sortedDates = Object.keys(recordsByDate).sort();
+            const recentDates = sortedDates.slice(-7);
+            
+            const lecturesData = recentDates.map(date => recordsByDate[date].lectures);
+            const dppData = recentDates.map(date => recordsByDate[date].dpp);
+            
+            // Create or update chart
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            
+            if (chart) {
+                chart.data.labels = recentDates;
+                chart.data.datasets[0].data = lecturesData;
+                chart.data.datasets[1].data = dppData;
+                chart.update();
+            } else {
+                chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: { 
+                        labels: recentDates, 
+                        datasets: [
+                            { 
+                                label: 'Lectures', 
+                                data: lecturesData, 
+                                backgroundColor: 'rgba(118,185,0,0.9)' 
+                            },
+                            { 
+                                label: 'DPP', 
+                                data: dppData, 
+                                backgroundColor: 'rgba(255,255,255,0.95)' 
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            x: {
+                                stacked: false,
+                                ticks: {
+                                    color: '#e9e9e9'
+                                }
+                            },
+                            y: {
+                                stacked: false,
+                                beginAtZero: true,
+                                ticks: {
+                                    color: '#e9e9e9'
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: { 
+                                labels: { 
+                                    color: '#fff' 
+                                } 
+                            }
+                        }
+                    }
+                });
+            }
+        } else {
+            // No data available
+            const ctx = document.getElementById('progressChart').getContext('2d');
+            if (chart) {
+                chart.destroy();
+                chart = null;
+            }
+            
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.fillStyle = '#1f1f1f';
+            ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.fillStyle = '#e9e9e9';
+            ctx.textAlign = 'center';
+            ctx.font = '16px Arial';
+            ctx.fillText('No data available', ctx.canvas.width / 2, ctx.canvas.height / 2);
+        }
+    } catch (error) {
+        console.error('Chart load error:', error);
+    }
 }
 
 /* wire recordsClass change to refresh */
@@ -560,6 +989,9 @@ document.getElementById('recordsClass').addEventListener('change', fetchDailyRec
 
 // Initialize the progress circle
 setTodayCircle(0);
+
+// Initial connection check when page loads
+checkServerConnection();
 </script>
 </body>
 </html>
