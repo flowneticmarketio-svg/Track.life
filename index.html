@@ -1,11 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Lecture Tracker</title>
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lecture Tracker - Progress Visualization</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --nvidia-green: #76b900;
@@ -14,552 +13,705 @@
             --text: #e9e9e9;
             --muted: #999;
             --radius: 10px;
+            --physics: #ff6b6b;
+            --chemistry: #48dbfb;
+            --maths: #1dd1a1;
         }
-        body { 
-            background: var(--dark-bg); 
-            color: var(--text); 
-            font-family: Inter, system-ui, sans-serif; 
-            padding:20px; 
-            margin: 0;
-        }
-        .container { 
-            max-width:1100px; 
-            margin:0 auto; 
-        }
-        header { 
-            display:flex; 
-            justify-content:space-between; 
-            align-items:center; 
-            margin-bottom:20px; 
-            flex-wrap: wrap;
-        }
-        h1 { 
-            color: var(--nvidia-green); 
-            margin: 0;
-        }
-        .card { 
-            background: var(--card-bg); 
-            border-radius:var(--radius); 
-            padding:18px; 
-            margin-bottom:16px; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.5); 
-        }
-        .grid { 
-            display:grid; 
-            grid-template-columns: 1fr; 
-            gap:20px; 
-        }
-        @media (min-width: 900px) {
-            .grid {
-                grid-template-columns: 1fr 380px;
-            }
-        }
-        .small-grid { 
-            display:grid; 
-            grid-template-columns: repeat(2,1fr); 
-            gap:12px; 
-        }
-        input, button, select { 
-            padding:10px; 
-            border-radius:8px; 
-            border:1px solid #333; 
-            background:#121212; 
-            color:var(--text); 
-            width: 100%;
+        
+        * {
             box-sizing: border-box;
+            margin: 0;
+            padding: 0;
         }
-        button.primary { 
-            background:var(--nvidia-green); 
-            color:#000; 
-            border:none; 
-            font-weight:700; 
-            cursor: pointer;
+        
+        body {
+            background: var(--dark-bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
         }
-        button.primary:disabled {
-            background: #555;
-            color: #999;
-            cursor: not-allowed;
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
         }
-        .center { 
-            text-align:center; 
-        }
-        .progress-circle { 
-            width:140px; 
-            height:140px; 
-            margin:0 auto; 
-            position:relative; 
-        }
-        .circle-text { 
-            position:absolute; 
-            left:50%; 
-            top:50%; 
-            transform:translate(-50%,-50%); 
-            font-size:20px; 
-            font-weight:700; 
-        }
-        ul.records { 
-            list-style:none; 
-            padding:0; 
-            margin:0; 
-            max-height:300px; 
-            overflow:auto; 
-        }
-        ul.records li { 
-            display:flex; 
-            justify-content:space-between; 
-            padding:8px 10px; 
-            border-bottom:1px solid #222; 
-        }
-        label { 
-            display:block; 
-            margin-bottom:6px; 
-            color:var(--muted); 
-        }
-        .inline { 
-            display:flex; 
-            gap:8px; 
-            align-items:center; 
-        }
-        .login-feedback {
-            margin-top: 10px;
-            padding: 10px;
-            border-radius: 8px;
-            text-align: center;
-            display: none;
-        }
-        .error {
-            background: #ff4444;
-            color: white;
-        }
-        .success {
-            background: #00C851;
-            color: white;
-        }
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(255,255,255,.3);
-            border-radius: 50%;
-            border-top-color: var(--nvidia-green);
-            animation: spin 1s ease-in-out infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        .flex-group {
+        
+        header {
             display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #333;
+        }
+        
+        h1 {
+            color: var(--nvidia-green);
+            font-size: 2.5rem;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo {
+            font-size: 2.8rem;
+            color: var(--nvidia-green);
+        }
+        
+        .subtitle {
+            color: var(--muted);
+            font-size: 1.1rem;
+            margin-top: 5px;
+        }
+        
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--nvidia-green);
+            display: flex;
+            align-items: center;
             gap: 10px;
         }
-        .flex-group > * {
-            flex: 1;
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 25px;
+        }
+        
+        @media (min-width: 900px) {
+            .grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        @media (min-width: 1200px) {
+            .grid {
+                grid-template-columns: 2fr 1fr;
+            }
+        }
+        
+        .progress-container {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+        
+        .class-progress {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .class-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .class-title {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: var(--nvidia-green);
+        }
+        
+        .progress-circles {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .progress-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+        
+        .progress-circle {
+            width: 120px;
+            height: 120px;
+            position: relative;
+            margin-bottom: 10px;
+        }
+        
+        .circle-bg {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: #333;
+            position: absolute;
+        }
+        
+        .circle-progress {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            clip: rect(0, 60px, 120px, 0);
+            background: var(--nvidia-green);
+            position: absolute;
+            transform: rotate(0deg);
+        }
+        
+        .circle-text {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+        
+        .progress-label {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-top: 5px;
+        }
+        
+        .subject-maths .circle-progress {
+            background: var(--maths);
+        }
+        
+        .subject-physics .circle-progress {
+            background: var(--physics);
+        }
+        
+        .subject-chemistry .circle-progress {
+            background: var(--chemistry);
+        }
+        
+        .progress-bar-container {
+            margin-top: 15px;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .progress-bar-fill {
+            height: 100%;
+            background: var(--nvidia-green);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 1s ease-in-out;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+        
+        input, select, button {
+            padding: 12px 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            background: #121212;
+            color: var(--text);
+            font-size: 1rem;
+        }
+        
+        button {
+            background: var(--nvidia-green);
+            color: #000;
+            border: none;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        button:hover {
+            background: #85d300;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(118, 185, 0, 0.4);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-box {
+            background: #252525;
+            padding: 15px;
+            border-radius: var(--radius);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: var(--nvidia-green);
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+        
+        .date-info {
+            text-align: center;
+            margin-top: 20px;
+            padding: 15px;
+            background: #252525;
+            border-radius: var(--radius);
+        }
+        
+        .days-remaining {
+            font-size: 1.2rem;
+            color: var(--nvidia-green);
+            margin-top: 5px;
+            font-weight: bold;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+        
+        .subject-filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .subject-filter {
+            padding: 8px 15px;
+            background: #252525;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .subject-filter.active {
+            background: var(--nvidia-green);
+            color: #000;
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <header>
-        <div>
-            <h1><i class="fas fa-chart-line"></i> Lecture Tracker</h1>
-            <div style="color:var(--muted)">Class 11 & 12</div>
-        </div>
-        <div id="loginBlock" class="card">
-            <div style="width:320px;">
-                <div style="margin-bottom:8px"><strong>Login</strong></div>
-                <label>Username</label>
-                <input id="username" placeholder="Username" value="RYUK"/>
-                <label style="margin-top:8px">Password</label>
-                <input id="password" type="password" placeholder="Password" value="THAD1560"/>
-                <div style="display:flex; gap:8px; margin-top:10px;">
-                    <button id="loginBtn" class="primary">
-                        <span id="loginText">Login</span>
-                        <span id="loginSpinner" style="display:none;" class="loading"></span>
-                    </button>
-                </div>
-                <div id="loginFeedback" class="login-feedback"></div>
+    <div class="container">
+        <header>
+            <div>
+                <h1><i class="fas fa-chart-line logo"></i> Lecture Tracker</h1>
+                <div class="subtitle">Track your Class 11 & 12 progress until August 31, 2025</div>
             </div>
-        </div>
-    </header>
-
-    <div id="dashboard" style="display:none;">
+            <div class="date-info">
+                <div>Days until target date:</div>
+                <div class="days-remaining" id="daysRemaining">Loading...</div>
+            </div>
+        </header>
+        
         <div class="grid">
-            <div>
+            <div class="progress-container">
                 <div class="card">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <strong>Submit Today's Progress</strong>
-                            <div style="color:var(--muted); font-size:13px;">Submit once per day to count streak</div>
-                        </div>
-                        <div id="streakBox" class="center">
-                            <div style="color:var(--muted); font-size:12px;">Streak</div>
-                            <div id="streakCount" style="font-size:22px; color:var(--nvidia-green);">0</div>
-                        </div>
-                    </div>
-
-                    <div style="display:flex; gap:18px; margin-top:16px; align-items:center; flex-direction: column;">
-                        <div style="flex:0 0 160px;">
-                            <div class="progress-circle card">
-                                <svg width="140" height="140" viewBox="0 0 120 120">
-                                    <circle cx="60" cy="60" r="54" stroke="#333" stroke-width="8" fill="none"></circle>
-                                    <circle id="todayCircleSVG" cx="60" cy="60" r="54" stroke="#76b900" stroke-width="8" fill="none" stroke-linecap="round" transform="rotate(-90 60 60)"></circle>
-                                </svg>
-                                <div class="circle-text" id="todayCircleText">0</div>
-                            </div>
-                        </div>
-
-                        <div style="width: 100%;">
-                            <label>Class</label>
-                            <select id="todayClass">
-                                <option value="12">12th</option>
-                                <option value="11">11th</option>
-                            </select>
-
-                            <div class="flex-group" style="margin-top:10px;">
-                                <div>
-                                    <label>Lectures done today</label>
-                                    <input type="number" id="todayLectures" min="0" value="0"/>
+                    <div class="card-title"><i class="fas fa-graduation-cap"></i> Class 12 Progress</div>
+                    <div class="class-progress">
+                        <div class="progress-circles">
+                            <div class="progress-item subject-maths">
+                                <div class="progress-circle">
+                                    <div class="circle-bg"></div>
+                                    <div class="circle-progress" id="maths12-lectures-circle"></div>
+                                    <div class="circle-text">
+                                        <span id="maths12-lectures-value">0%</span>
+                                        <div class="progress-label">Lectures</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <label>DPP done today</label>
-                                    <input type="number" id="todayDpp" min="0" value="0"/>
+                                <div>Maths</div>
+                            </div>
+                            
+                            <div class="progress-item subject-physics">
+                                <div class="progress-circle">
+                                    <div class="circle-bg"></div>
+                                    <div class="circle-progress" id="physics12-lectures-circle"></div>
+                                    <div class="circle-text">
+                                        <span id="physics12-lectures-value">0%</span>
+                                        <div class="progress-label">Lectures</div>
+                                    </div>
                                 </div>
+                                <div>Physics</div>
                             </div>
-
-                            <div style="margin-top:12px; display:flex; gap:8px;">
-                                <button class="primary" onclick="submitToday()">Submit</button>
-                                <button onclick="fetchDailyRecords()">Refresh Records</button>
+                            
+                            <div class="progress-item subject-chemistry">
+                                <div class="progress-circle">
+                                    <div class="circle-bg"></div>
+                                    <div class="circle-progress" id="chemistry12-lectures-circle"></div>
+                                    <div class="circle-text">
+                                        <span id="chemistry12-lectures-value">0%</span>
+                                        <div class="progress-label">Lectures</div>
+                                    </div>
+                                </div>
+                                <div>Chemistry</div>
                             </div>
-
-                            <div style="margin-top:12px; color:var(--muted); font-size:13px;">
-                                Note: Streak increments only if you submit (lectures>0 or dpp>0) for the day.
+                        </div>
+                        
+                        <div class="progress-circles">
+                            <div class="progress-item subject-maths">
+                                <div class="progress-circle">
+                                    <div class="circle-bg"></div>
+                                    <div class="circle-progress" id="maths12-dpp-circle"></div>
+                                    <div class="circle-text">
+                                        <span id="maths12-dpp-value">0%</span>
+                                        <div class="progress-label">DPP</div>
+                                    </div>
+                                </div>
+                                <div>Maths Practice</div>
+                            </div>
+                            
+                            <div class="progress-item subject-physics">
+                                <div class="progress-circle">
+                                    <div class="circle-bg"></div>
+                                    <div class="circle-progress" id="physics12-dpp-circle"></div>
+                                    <div class="circle-text">
+                                        <span id="physics12-dpp-value">0%</span>
+                                        <div class="progress-label">DPP</div>
+                                    </div>
+                                </div>
+                                <div>Physics Practice</div>
+                            </div>
+                            
+                            <div class="progress-item subject-chemistry">
+                                <div class="progress-circle">
+                                    <div class="circle-bg"></div>
+                                    <div class="circle-progress" id="chemistry12-dpp-circle"></div>
+                                    <div class="circle-text">
+                                        <span id="chemistry12-dpp-value">0%</span>
+                                        <div class="progress-label">DPP</div>
+                                    </div>
+                                </div>
+                                <div>Chemistry Practice</div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <div class="card" style="margin-top:12px;">
-                    <strong>Daily Records</strong>
-                    <div style="margin-top:8px;">
-                        <label>Show records for</label>
-                        <select id="recordsClass">
-                            <option value="">All classes</option>
-                            <option value="12">12th</option>
-                            <option value="11">11th</option>
+                
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-book"></i> Class 11 Progress</div>
+                    <div class="class-progress">
+                        <div class="progress-circles">
+                            <div class="progress-item subject-maths">
+                                <div class="progress-circle">
+                                    <div class="circle-bg"></div>
+                                    <div class="circle-progress" id="maths11-lectures-circle"></div>
+                                    <div class="circle-text">
+                                        <span id="maths11-lectures-value">0%</span>
+                                        <div class="progress-label">Lectures</div>
+                                    </div>
+                                </div>
+                                <div>Maths</div>
+                            </div>
+                            
+                            <div class="progress-item subject-physics">
+                                <div class="progress-circle">
+                                    <div class="circle-bg"></div>
+                                    <div class="circle-progress" id="physics11-lectures-circle"></div>
+                                    <div class="circle-text">
+                                        <span id="physics11-lectures-value">0%</span>
+                                        <div class="progress-label">Lectures</div>
+                                    </div>
+                                </div>
+                                <div>Physics</div>
+                            </div>
+                            
+                            <div class="progress-item subject-chemistry">
+                                <div class="progress-circle">
+                                    <div class="circle-bg"></div>
+                                    <div class="circle-progress" id="chemistry11-lectures-circle"></div>
+                                    <div class="circle-text">
+                                        <span id="chemistry11-lectures-value">0%</span>
+                                        <div class="progress-label">Lectures</div>
+                                    </div>
+                                </div>
+                                <div>Chemistry</div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-circles">
+                            <div class="progress-item subject-maths">
+                                <div class="progress-circle">
+                                    <div class="circle-bg"></div>
+                                    <div class="circle-progress" id="maths11-dpp-circle"></div>
+                                    <div class="circle-text">
+                                        <span id="maths11-dpp-value">0%</span>
+                                        <div class="progress-label">DPP</div>
+                                    </div>
+                                </div>
+                                <div>Maths Practice</div>
+                            </div>
+                            
+                            <div class="progress-item subject-physics">
+                                <div class="progress-circle">
+                                    <div class="circle-bg"></div>
+                                    <div class="circle-progress" id="physics11-dpp-circle"></div>
+                                    <div class="circle-text">
+                                        <span id="physics11-dpp-value">0%</span>
+                                        <div class="progress-label">DPP</div>
+                                    </div>
+                                </div>
+                                <div>Physics Practice</div>
+                            </div>
+                            
+                            <div class="progress-item subject-chemistry">
+                                <div class="progress-circle">
+                                    <div class="circle-bg"></div>
+                                    <div class="circle-progress" id="chemistry11-dpp-circle"></div>
+                                    <div class="circle-text">
+                                        <span id="chemistry11-dpp-value">0%</span>
+                                        <div class="progress-label">DPP</div>
+                                    </div>
+                                </div>
+                                <div>Chemistry Practice</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-sliders-h"></i> Progress Controls</div>
+                    <div class="control-group">
+                        <label for="classSelect">Select Class</label>
+                        <select id="classSelect">
+                            <option value="12">Class 12</option>
+                            <option value="11">Class 11</option>
                         </select>
-                        <div style="margin-top:8px;">
-                            <ul id="dailyList" class="records"></ul>
+                        
+                        <label for="subjectSelect">Select Subject</label>
+                        <select id="subjectSelect">
+                            <option value="maths">Maths</option>
+                            <option value="physics">Physics</option>
+                            <option value="chemistry">Chemistry</option>
+                        </select>
+                        
+                        <label for="typeSelect">Progress Type</label>
+                        <select id="typeSelect">
+                            <option value="lectures">Lectures</option>
+                            <option value="dpp">DPP (Daily Practice Problems)</option>
+                        </select>
+                        
+                        <label for="progressValue">Progress Value (0-100%)</label>
+                        <input type="range" id="progressValue" min="0" max="100" value="0">
+                        <div style="text-align: center; margin-top: 5px;">
+                            <span id="progressValueDisplay">0%</span>
                         </div>
+                        
+                        <button id="updateProgress">Update Progress</button>
                     </div>
                 </div>
-            </div>
-
-            <div>
+                
                 <div class="card">
-                    <strong>Progress Graph</strong>
-                    <div style="margin-top:12px;">
-                        <canvas id="progressChart" height="260"></canvas>
+                    <div class="card-title"><i class="fas fa-chart-pie"></i> Overall Progress</div>
+                    <div class="stats">
+                        <div class="stat-box">
+                            <div class="stat-label">Class 12</div>
+                            <div class="stat-value" id="overall12">0%</div>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" id="overall12-bar"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-box">
+                            <div class="stat-label">Class 11</div>
+                            <div class="stat-value" id="overall11">0%</div>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" id="overall11-bar"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-box">
+                            <div class="stat-label">Total Progress</div>
+                            <div class="stat-value" id="overallTotal">0%</div>
+                            <div class="progress-bar">
+                                <div class="progress-bar-fill" id="overallTotal-bar"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <div class="card" style="margin-top:12px;">
-                    <strong>Quick Controls / Admin (UI)</strong>
-                    <div style="margin-top:8px;">
-                        <label>Admin actions (use carefully)</label>
-                        <div style="display:flex; gap:8px; margin-top:8px;">
-                            <input id="admUserId" placeholder="user_id" />
-                            <button onclick="loadMyUserId()">Use my ID</button>
-                        </div>
-
-                        <div style="margin-top:8px;">
-                            <small style="color:var(--muted)">Set values for 12th (maths/physics/chemistry/class12)</small>
-                            <div class="small-grid" style="margin-top:8px;">
-                                <input id="admin-maths-lectures" placeholder="maths lectures (12)" type="number"/>
-                                <input id="admin-maths-dpp" placeholder="maths dpp (12)" type="number"/>
-                                <input id="admin-physics-lectures" placeholder="physics lectures (12)" type="number"/>
-                                <input id="admin-physics-dpp" placeholder="physics dpp (12)" type="number"/>
-                                <input id="admin-chem-lectures" placeholder="chem lectures (12)" type="number"/>
-                                <input id="admin-chem-dpp" placeholder="chem dpp (12)" type="number"/>
-                            </div>
-                            <div style="margin-top:8px;">
-                                <button onclick="adminUpdate12()" class="primary">Update 12th</button>
-                            </div>
-                        </div>
-
-                        <div style="margin-top:12px;">
-                            <small style="color:var(--muted)">Set values for 11th (maths11/physics11/chemistry11/class11)</small>
-                            <div class="small-grid" style="margin-top:8px;">
-                                <input id="admin-m11-lectures" placeholder="maths11 lectures" type="number"/>
-                                <input id="admin-m11-dpp" placeholder="maths11 dpp" type="number"/>
-                                <input id="admin-p11-lectures" placeholder="physics11 lectures" type="number"/>
-                                <input id="admin-p11-dpp" placeholder="physics11 dpp" type="number"/>
-                                <input id="admin-c11-lectures" placeholder="chem11 lectures" type="number"/>
-                                <input id="admin-c11-dpp" placeholder="chem11 dpp" type="number"/>
-                            </div>
-                            <div style="margin-top:8px;">
-                                <button onclick="adminUpdate11()" class="primary">Update 11th</button>
-                            </div>
-                        </div>
+                
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-calendar"></i> Timeline</div>
+                    <div class="date-info">
+                        <div>Target Completion Date:</div>
+                        <div class="days-remaining">August 31, 2025</div>
+                        <div style="margin-top: 10px;">You have <span id="daysValue">0</span> days to complete your preparation</div>
                     </div>
                 </div>
             </div>
+        </div>
+        
+        <div class="footer">
+            <p>Track your progress daily to achieve your goals by August 31, 2025!</p>
+            <p>© 2023 Lecture Tracker | Designed for JEE Aspirants</p>
         </div>
     </div>
-</div>
 
-<!-- Chart.js CDN -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script>
-let loggedUserId = null;
-let chart = null;
-
-// Helper to draw the circular progress on the left
-function setTodayCircle(val) {
-    const radius = 54;
-    const circumference = 2 * Math.PI * radius;
-    const percent = Math.min(100, val);
-    const offset = circumference - (percent / 100) * circumference;
-    const circle = document.getElementById('todayCircleSVG');
-    circle.style.strokeDasharray = `${circumference} ${circumference}`;
-    circle.style.strokeDashoffset = offset;
-    document.getElementById('todayCircleText').textContent = val;
-}
-
-// Show feedback message
-function showFeedback(message, type) {
-    const feedback = document.getElementById('loginFeedback');
-    feedback.textContent = message;
-    feedback.className = `login-feedback ${type}`;
-    feedback.style.display = 'block';
-    
-    // Hide after 3 seconds
-    setTimeout(() => {
-        feedback.style.display = 'none';
-    }, 3000);
-}
-
-// Login flow
-document.getElementById('loginBtn').addEventListener('click', async () => {
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value.trim();
-    
-    if(!username || !password) {
-        showFeedback('Enter credentials', 'error');
-        return;
-    }
-
-    // Show loading state
-    document.getElementById('loginText').style.display = 'none';
-    document.getElementById('loginSpinner').style.display = 'inline-block';
-    document.getElementById('loginBtn').disabled = true;
-
-    try {
-        // Simulate API call with timeout to demonstrate the UI
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        
-        // In a real scenario, you would make the actual API call:
-        /*
-        const res = await fetch('/api/login', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({username, password})
-        });
-        const js = await res.json();
-        */
-        
-        // For demonstration, we'll simulate a successful login
-        // Replace this with the actual API response handling
-        const js = {success: true, user_id: 1, username: username};
-        
-        if(js.success) {
-            loggedUserId = js.user_id;
-            document.getElementById('loginBlock').style.display = 'none';
-            document.getElementById('dashboard').style.display = 'block';
-            document.getElementById('admUserId').value = loggedUserId;
-            
-            // Simulate fetching data
-            setTodayCircle(5);
-            document.getElementById('streakCount').textContent = '3 days';
-            
-            // Add some sample records
-            const dailyList = document.getElementById('dailyList');
-            dailyList.innerHTML = `
-                <li><div>2023-10-15 <small style="color:var(--muted)">class 12</small></div><div style="min-width:120px; text-align:right;"><strong>2</strong> lec &nbsp; <strong>1</strong> dpp</div></li>
-                <li><div>2023-10-14 <small style="color:var(--muted)">class 12</small></div><div style="min-width:120px; text-align:right;"><strong>1</strong> lec &nbsp; <strong>2</strong> dpp</div></li>
-                <li><div>2023-10-13 <small style="color:var(--muted)">class 11</small></div><div style="min-width:120px; text-align:right;"><strong>3</strong> lec &nbsp; <strong>0</strong> dpp</div></li>
-            `;
-            
-            loadChart();
-            showFeedback('Login successful!', 'success');
-        } else {
-            showFeedback('Login failed: Invalid credentials', 'error');
-        }
-    } catch (error) {
-        showFeedback('Network error: Could not connect to server', 'error');
-        console.error('Login error:', error);
-    } finally {
-        // Reset loading state
-        document.getElementById('loginText').style.display = 'inline-block';
-        document.getElementById('loginSpinner').style.display = 'none';
-        document.getElementById('loginBtn').disabled = false;
-    }
-});
-
-function loadMyUserId(){
-    if(loggedUserId) document.getElementById('admUserId').value = loggedUserId;
-}
-
-// Submit today's progress
-async function submitToday(){
-    if(!loggedUserId) {
-        showFeedback('Please login first', 'error');
-        return;
-    }
-
-    const cls = document.getElementById('todayClass').value;
-    const lectures = parseInt(document.getElementById('todayLectures').value || 0);
-    const dpp = parseInt(document.getElementById('todayDpp').value || 0);
-
-    if(lectures <= 0 && dpp <= 0) {
-        if(!confirm('You are submitting 0. Do you want to continue?')) return;
-    }
-
-    // Show loading or processing state here in a real app
-    
-    // Simulate API call
-    try {
-        // In a real app, you would make the actual API call:
-        /*
-        const res = await fetch('/api/submit_daily', {
-            method: 'POST',
-            headers: {'Content-Type':'application/json'},
-            body: JSON.stringify({ user_id: loggedUserId, class_level: parseInt(cls), lectures, dpp })
-        });
-        const js = await res.json();
-        */
-        
-        // For demonstration, we'll simulate a successful submission
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // update circle value showing combined (lectures+dpp) for a quick visual
-        const total = lectures + dpp;
-        setTodayCircle(total);
-        
-        // Add the new record to the list
-        const today = new Date().toISOString().split('T')[0];
-        const dailyList = document.getElementById('dailyList');
-        const newItem = document.createElement('li');
-        newItem.innerHTML = `<div>${today} <small style="color:var(--muted)">class ${cls}</small></div>
-                            <div style="min-width:120px; text-align:right;"><strong>${lectures}</strong> lec &nbsp; <strong>${dpp}</strong> dpp</div>`;
-        dailyList.insertBefore(newItem, dailyList.firstChild);
-        
-        alert('Submitted successfully!');
-        updateChart();
-    } catch (error) {
-        alert('Error: Could not submit data');
-        console.error('Submission error:', error);
-    }
-}
-
-// Fetch daily records
-async function fetchDailyRecords(){
-    if(!loggedUserId) return;
-    // This would call your API in a real application
-    alert("This would refresh records from the server in the live version");
-}
-
-// Fetch streak
-async function fetchStreak(){
-    if(!loggedUserId) return;
-    // This would call your API in a real application
-}
-
-// Admin update 12th
-async function adminUpdate12(){
-    const uid = document.getElementById('admUserId').value;
-    if(!uid) {
-        alert('Set user id');
-        return;
-    }
-
-    alert("This would update 12th progress in the live version");
-}
-
-// Admin update 11th
-async function adminUpdate11(){
-    const uid = document.getElementById('admUserId').value;
-    if(!uid) {
-        alert('Set user id');
-        return;
-    }
-
-    alert("This would update 11th progress in the live version");
-}
-
-/* Chart functions */
-async function loadChart(){
-    const ctx = document.getElementById('progressChart').getContext('2d');
-    
-    // Sample data for demonstration
-    const labels = ['Oct 10', 'Oct 11', 'Oct 12', 'Oct 13', 'Oct 14', 'Oct 15'];
-    const lectures = [2, 1, 0, 3, 1, 2];
-    const dpps = [1, 2, 0, 0, 2, 1];
-    
-    chart = new Chart(ctx, {
-        type: 'bar',
-        data: { 
-            labels: labels, 
-            datasets: [
-                { 
-                    label: 'Lectures', 
-                    data: lectures, 
-                    backgroundColor: 'rgba(118,185,0,0.9)' 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize progress values
+            const progressData = {
+                '12': {
+                    'maths': { 'lectures': 0, 'dpp': 0 },
+                    'physics': { 'lectures': 0, 'dpp': 0 },
+                    'chemistry': { 'lectures': 0, 'dpp': 0 }
                 },
-                { 
-                    label: 'DPP', 
-                    data: dpps, 
-                    backgroundColor: 'rgba(255,255,255,0.95)' 
+                '11': {
+                    'maths': { 'lectures': 0, 'dpp': 0 },
+                    'physics': { 'lectures': 0, 'dpp': 0 },
+                    'chemistry': { 'lectures': 0, 'dpp': 0 }
                 }
-            ]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                x: {
-                    stacked: false,
-                    ticks: {
-                        color: '#e9e9e9'
-                    }
-                },
-                y: {
-                    stacked: false,
-                    beginAtZero: true,
-                    ticks: {
-                        color: '#e9e9e9'
-                    }
-                }
-            },
-            plugins: {
-                legend: { 
-                    labels: { 
-                        color: '#fff' 
-                    } 
-                }
+            };
+            
+            // Calculate days until August 31, 2025
+            function calculateDaysRemaining() {
+                const today = new Date();
+                const targetDate = new Date('2025-08-31');
+                const timeDiff = targetDate.getTime() - today.getTime();
+                const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                return daysDiff;
             }
-        }
-    });
-}
-
-async function updateChart(){
-    // This would update the chart with real data in a live application
-    console.log("Chart would be updated with new data");
-}
-
-/* wire recordsClass change to refresh */
-document.getElementById('recordsClass').addEventListener('change', fetchDailyRecords);
-
-// Initialize the progress circle
-setTodayCircle(0);
-</script>
+            
+            // Update days remaining
+            const daysRemaining = calculateDaysRemaining();
+            document.getElementById('daysRemaining').textContent = `${daysRemaining} Days`;
+            document.getElementById('daysValue').textContent = daysRemaining;
+            
+            // Update progress circles
+            function updateProgressCircles() {
+                for (const cls of ['11', '12']) {
+                    for (const subject of ['maths', 'physics', 'chemistry']) {
+                        for (const type of ['lectures', 'dpp']) {
+                            const value = progressData[cls][subject][type];
+                            const circle = document.getElementById(`${subject}${cls}-${type}-circle`);
+                            const valueDisplay = document.getElementById(`${subject}${cls}-${type}-value`);
+                            
+                            if (circle && valueDisplay) {
+                                const degrees = (value / 100) * 360;
+                                circle.style.transform = `rotate(${degrees}deg)`;
+                                valueDisplay.textContent = `${value}%`;
+                            }
+                        }
+                    }
+                }
+                
+                // Update overall progress
+                updateOverallProgress();
+            }
+            
+            // Update overall progress
+            function updateOverallProgress() {
+                let total12 = 0, total11 = 0, count12 = 0, count11 = 0;
+                
+                for (const subject of ['maths', 'physics', 'chemistry']) {
+                    for (const type of ['lectures', 'dpp']) {
+                        total12 += progressData['12'][subject][type];
+                        total11 += progressData['11'][subject][type];
+                        count12++;
+                        count11++;
+                    }
+                }
+                
+                const avg12 = Math.round(total12 / count12);
+                const avg11 = Math.round(total11 / count11);
+                const avgTotal = Math.round((total12 + total11) / (count12 + count11));
+                
+                document.getElementById('overall12').textContent = `${avg12}%`;
+                document.getElementById('overall11').textContent = `${avg11}%`;
+                document.getElementById('overallTotal').textContent = `${avgTotal}%`;
+                
+                document.getElementById('overall12-bar').style.width = `${avg12}%`;
+                document.getElementById('overall11-bar').style.width = `${avg11}%`;
+                document.getElementById('overallTotal-bar').style.width = `${avgTotal}%`;
+            }
+            
+            // Initialize progress circles
+            updateProgressCircles();
+            
+            // Set up event listeners
+            const progressSlider = document.getElementById('progressValue');
+            const progressDisplay = document.getElementById('progressValueDisplay');
+            
+            progressSlider.addEventListener('input', function() {
+                progressDisplay.textContent = `${this.value}%`;
+            });
+            
+            document.getElementById('updateProgress').addEventListener('click', function() {
+                const cls = document.getElementById('classSelect').value;
+                const subject = document.getElementById('subjectSelect').value;
+                const type = document.getElementById('typeSelect').value;
+                const value = parseInt(progressSlider.value);
+                
+                progressData[cls][subject][type] = value;
+                updateProgressCircles();
+                
+                // Show confirmation
+                alert(`Updated ${subject} ${type} for Class ${cls} to ${value}%`);
+            });
+            
+            // Simulate initial progress after a delay
+            setTimeout(() => {
+                // Set some initial progress values for demonstration
+                progressData['12']['maths']['lectures'] = 15;
+                progressData['12']['physics']['lectures'] = 10;
+                progressData['12']['chemistry']['lectures'] = 12;
+                progressData['12']['maths']['dpp'] = 8;
+                progressData['12']['physics']['dpp'] = 5;
+                progressData['12']['chemistry']['dpp'] = 7;
+                
+                progressData['11']['maths']['lectures'] = 20;
+                progressData['11']['physics']['lectures'] = 15;
+                progressData['11']['chemistry']['lectures'] = 18;
+                progressData['11']['maths']['dpp'] = 12;
+                progressData['11']['physics']['dpp'] = 10;
+                progressData['11']['chemistry']['dpp'] = 9;
+                
+                updateProgressCircles();
+            }, 1000);
+        });
+    </script>
 </body>
 </html>
